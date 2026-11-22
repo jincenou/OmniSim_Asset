@@ -1,0 +1,67 @@
+diff --git a/fdanyone/config.py b/fdanyone/config.py
+index 0012f00..2974fb2 100644
+--- a/fdanyone/config.py
++++ b/fdanyone/config.py
+@@ -11,7 +11,7 @@ from dataclasses import dataclass
+ 
+ @dataclass(frozen=True)
+ class InferenceConfig:
+-    num_frames: int = 121
++    num_frames: int = 21
+     height: int = 1280
+     width: int = 704
+     prompt: str = "视频中的人在做动作"
+diff --git a/fdanyone/model/inference.py b/fdanyone/model/inference.py
+index 4cf8a86..5fbc845 100644
+--- a/fdanyone/model/inference.py
++++ b/fdanyone/model/inference.py
+@@ -250,7 +250,7 @@ def _resolve_generation_plan(
+     import torch
+ 
+     if conditioning.num_frames != INFERENCE.num_frames:
+-        raise FourDAnyoneError("Generation requires the frozen 121-frame contract.")
++        raise FourDAnyoneError("Generation requires the experimental 21-frame contract.")
+     if not devices:
+         raise FourDAnyoneError("Generation requires at least one CUDA device.")
+ 
+diff --git a/fdanyone/motion/result.py b/fdanyone/motion/result.py
+index 85b2995..edbc3cb 100644
+--- a/fdanyone/motion/result.py
++++ b/fdanyone/motion/result.py
+@@ -35,7 +35,7 @@ class MotionResult:
+     def num_frames(self) -> int:
+         return len(self.frame_timestamps_sec)
+ 
+-    def validate(self, expected_frames: int = 121) -> None:
++    def validate(self, expected_frames: int = 21) -> None:
+         try:
+             import torch
+         except ImportError as exc:
+diff --git a/fdanyone/pipeline.py b/fdanyone/pipeline.py
+index 124045f..7a3353d 100644
+--- a/fdanyone/pipeline.py
++++ b/fdanyone/pipeline.py
+@@ -252,7 +252,7 @@ def run_pipeline(
+     base_assets = resolve_base_assets(model_dir)
+     regressor = resolve_regressor(mhr70_regressor_path, model_dir=model_dir)
+     foreground_model = resolve_foreground_model(model_dir)
+-    PROGRESS.info("Preparing the 121-frame clip", extra={"fraction": 0.10})
++    PROGRESS.info("Preparing the experimental 21-frame clip", extra={"fraction": 0.10})
+     clip = decode_canonical_clip(
+         video_path,
+         num_frames=INFERENCE.num_frames,
+diff --git a/third_party/GVHMR b/third_party/GVHMR
+deleted file mode 160000
+index 6ec3ca3..0000000
+--- a/third_party/GVHMR
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit 6ec3ca39336c50492c0fae65fba2fb831fc7d866
+diff --git a/third_party/GVHMR b/third_party/GVHMR
+new file mode 120000
+index 0000000..809e93e
+--- /dev/null
++++ b/third_party/GVHMR
+@@ -0,0 +1 @@
++/mnt/ojc/workplace1/4danyone/repo/third_party/GVHMR
+\ No newline at end of file

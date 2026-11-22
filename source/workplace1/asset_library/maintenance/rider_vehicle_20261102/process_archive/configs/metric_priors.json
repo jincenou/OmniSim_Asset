@@ -1,0 +1,123 @@
+{
+  "unu": {
+    "length_m": 1.8,
+    "source": "https://www.cleanelectric.de/wp-content/uploads/2019/06/unu_ProductBriefing_unuScooter.pdf",
+    "confidence": "medium"
+  },
+  "gogoro": {
+    "length_m": 1.73,
+    "source": "https://images.gogoroapp.com/download/PDF/gogoro-smartscooter-spec-sheet-metric-unit.pdf",
+    "confidence": "medium"
+  },
+  "bicycle_nusc_780be296": {
+    "length_m": 1.817,
+    "source": "nuScenes sample annotation for instance 780be296902a459f870c9ffbacdb8e1e, source packet size_wlh length",
+    "confidence": "low",
+    "limitation": "Dataset box is a size prior for the complete assembly. FLUX and reconstruction modify geometry; not a measured generated bicycle."
+  },
+  "govecs": {
+    "length_m": 1.942,
+    "source": "https://www.govecsgroup.com/fileadmin/user_upload/downloads/GOVECS_FLEX_2.0_User_Manual090322.pdf",
+    "source_section": "Technical data, printed pages 32-33",
+    "confidence": "low",
+    "alternative_official_length_m": 1.89,
+    "alternative_source": "https://www.govecsgroup.com/fileadmin/user_upload/technische_Datenblaetter/Technical_Data_GOVECS_FLEX_2.0_01.pdf",
+    "limitation": "Official documents differ by configuration/version; exact source video year and topcase extension not established. Nominal vehicle length used only as approximate complete-assembly scale prior, not a calibrated scan."
+  },
+  "niu_nqi_leather": {
+    "length_m": 1.89,
+    "source": "https://global.niu.com/en-us/product/NQi-GTS",
+    "confidence": "medium",
+    "limitation": "Official model-family length only; reconstruction changes unseen geometry. Scale is an isotropic prior for full assembly, not a calibrated scan."
+  },
+  "niu_nqi_light": {
+    "length_m": 1.89,
+    "source": "https://global.niu.com/en-us/product/NQi-GTS",
+    "confidence": "medium",
+    "limitation": "Official model-family length only; reconstruction changes unseen geometry. Scale is an isotropic prior for full assembly, not a calibrated scan."
+  },
+  "web26_mqi_gt_cream": {
+    "length_m": 1.89,
+    "source": "https://global.niu.com/en-us/product/MQi-GT",
+    "confidence": "low",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/MQi-GT.html",
+    "source_sha256": "ec6d0515f740c260151dbee79c7b37334806836aaa3acd3129cb3bdec23a5b71",
+    "evidence": [
+      "GT 100 1949 mm Length 816 mm Seat Height 593 lbs max Weight 2 Seats The 4th Generation NIU Energy Instantly feel th",
+      "T HTN HTN Size Length 1949 mm 1890 mm 1890 mm Width 700 mm 700 mm 700 mm Height 1171 mm 1171 mm 1171 mm Wheel Base ",
+      "mm 816 mm Seat Length 782 mm 782 mm 782 mm Ground Clearance 180 mm 180 mm 180 mm FIND A DEALER BOOK A TEST DRIVE BO"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified.",
+    "alternative_official_length_m": 1.949
+  },
+  "web26_mqi_gt_blazer": {
+    "length_m": 1.89,
+    "source": "https://global.niu.com/en-us/product/MQi-GT",
+    "confidence": "low",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/MQi-GT.html",
+    "source_sha256": "ec6d0515f740c260151dbee79c7b37334806836aaa3acd3129cb3bdec23a5b71",
+    "evidence": [
+      "GT 100 1949 mm Length 816 mm Seat Height 593 lbs max Weight 2 Seats The 4th Generation NIU Energy Instantly feel th",
+      "T HTN HTN Size Length 1949 mm 1890 mm 1890 mm Width 700 mm 700 mm 700 mm Height 1171 mm 1171 mm 1171 mm Wheel Base ",
+      "mm 816 mm Seat Length 782 mm 782 mm 782 mm Ground Clearance 180 mm 180 mm 180 mm FIND A DEALER BOOK A TEST DRIVE BO"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified.",
+    "alternative_official_length_m": 1.949
+  },
+  "web26_fqi_black_polo": {
+    "length_m": 1.97,
+    "source": "https://global.niu.com/en-us/product/FQi",
+    "confidence": "medium",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/FQi.html",
+    "source_sha256": "209e1c39fa2f2bda16794e2ba97a25b79488fae7a49d42fa1cc77b5f6c4f873b",
+    "evidence": [
+      "r Display Size Length 1970 mm Width 710 mm Height 1134 mm Wheel Base 1350 mm Seat Height 760 mm Ground Clearance 14"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified."
+  },
+  "web26_mqi_sport_white": {
+    "length_m": 1.728,
+    "source": "https://global.niu.com/en-us/product/MQi-Sport",
+    "confidence": "medium",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/MQi-Sport.html",
+    "source_sha256": "55f5c5ac78d7a993baf68155123a95e0d7c1296964dcdbfccfbe58dc0a138e21",
+    "evidence": [
+      "d LCD LCD Size Length 1728 mm 1728 mm Width 661 mm 661 mm Height 1131 mm 1131 mm Wheel Base 1241 mm 1241 mm Seat He",
+      "mm 750 mm Seat Length 560 mm 560 mm Ground Clearance 126 mm 126 mm FIND A DEALER BOOK A TEST DRIVE BOOK A TEST DRIV"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified."
+  },
+  "web26_nqi_sport_green": {
+    "length_m": 1.8,
+    "source": "https://global.niu.com/en-us/product/NQi-Sport",
+    "confidence": "medium",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/NQi-Sport.html",
+    "source_sha256": "0ef680f4308843f8ef9ac375fd31cd6fb8996d90faf2b329c2a0f7c75e87b676",
+    "evidence": [
+      "d LCD LCD Size Length 1800 mm 1800 mm Width 740 mm 740 mm Height 1130 mm 1130 mm FIND A DEALER BOOK A TEST DRIVE BO"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified."
+  },
+  "web26_nqi_sport_river": {
+    "length_m": 1.8,
+    "source": "https://global.niu.com/en-us/product/NQi-Sport",
+    "confidence": "medium",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/NQi-Sport.html",
+    "source_sha256": "0ef680f4308843f8ef9ac375fd31cd6fb8996d90faf2b329c2a0f7c75e87b676",
+    "evidence": [
+      "d LCD LCD Size Length 1800 mm 1800 mm Width 740 mm 740 mm Height 1130 mm 1130 mm FIND A DEALER BOOK A TEST DRIVE BO"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified."
+  },
+  "web26_fqix_orange": {
+    "length_m": 1.979,
+    "source": "https://global.niu.com/en-us/product/FQiX-300",
+    "confidence": "medium",
+    "source_snapshot": "/mnt/ojc/workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/sources/web_expansion_20261103/FQiX-300.html",
+    "source_sha256": "fd86a18e806944f92ee345885bf1f719529e4de12544edcbcedb2e0a00f6e6e5",
+    "evidence": [
+      "rter over time Length \u00d7 W \u00d7 H 1979 \u00d7 745 \u00d7 1152 mm Seat height 785 mm Wheelbase 1400 mm Storage 31L under-seat (ful"
+    ],
+    "limitation": "Manufacturer vehicle length used as an approximate isotropic scale prior; generated geometry and assembled rider height are not calibrated measurements. Page gallery model version is not independently verified."
+  }
+}

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+export CUDA_VISIBLE_DEVICES=4,5,6,7
+export PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True,max_split_size_mb:4096
+export PYTHONNOUSERSITE=1
+export PYTHONDONTWRITEBYTECODE=1
+export HF_HOME=/mnt/ojc/workplace1/4danyone/cache/huggingface
+export TORCH_HOME=/mnt/ojc/workplace1/4danyone/cache/torch
+export TORCH_EXTENSIONS_DIR=/mnt/ojc/workplace1/4danyone/cache/torch_extensions
+export TRITON_CACHE_DIR=/mnt/ojc/workplace1/4danyone/cache/triton
+export HF_HUB_CACHE=/mnt/ojc/workplace1/4danyone/cache/huggingface/hub
+export XDG_CACHE_HOME=/mnt/ojc/workplace1/4danyone/cache
+export PIP_CACHE_DIR=/mnt/ojc/workplace1/4danyone/cache/pip
+export CONDA_PKGS_DIRS=/mnt/ojc/workplace1/4danyone/cache/conda
+export TMPDIR=/mnt/ojc/workplace1/4danyone/tmp
+export MPLCONFIGDIR=/mnt/ojc/workplace1/4danyone/cache/matplotlib
+export YOLO_CONFIG_DIR=/mnt/ojc/workplace1/4danyone/cache/ultralytics
+mkdir -p "$YOLO_CONFIG_DIR/Ultralytics"
+export OMP_NUM_THREADS=8
+export PYTHONUNBUFFERED=1

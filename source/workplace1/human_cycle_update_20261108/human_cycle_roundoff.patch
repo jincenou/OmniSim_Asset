@@ -1,0 +1,15 @@
+diff --git a/src/shared/assets/human_cycle.py b/src/shared/assets/human_cycle.py
+index 69e21ce..5f0901a 100644
+--- a/src/shared/assets/human_cycle.py
++++ b/src/shared/assets/human_cycle.py
+@@ -179,7 +179,9 @@ class CyclicRuntimeAsset:
+             return p.start_s + phase, None, 0.
+         delta = phase if phase < width else phase - p.period_s
+         u = np.clip((delta + width) / (2 * width), 0., 1.)
+-        blend = float(u**3 * (10 + u * (-15 + 6 * u)))
++        # The quintic can round slightly above 1 near the transition endpoint.
++        # Covariance interpolation deliberately rejects extrapolation.
++        blend = float(np.clip(u**3 * (10 + u * (-15 + 6 * u)), 0., 1.))
+         return p.end_s + delta, p.start_s + delta, blend
+ 
+     def sample(self, source_time_s: float = 0.) -> GaussianAssetFrame:

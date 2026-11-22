@@ -1,0 +1,28 @@
+diff --git a/utils/general_utils.py b/utils/general_utils.py
+index 0f445ce..0915f4b 100644
+--- a/utils/general_utils.py
++++ b/utils/general_utils.py
+@@ -14,7 +14,6 @@ import sys
+ from datetime import datetime
+ import numpy as np
+ import random
+-from pointops2.functions.pointops import furthestsampling, knnquery
+ 
+ def inverse_sigmoid(x):
+     return torch.log(x/(1-x))
+@@ -167,6 +166,7 @@ def safe_state(silent):
+     torch.cuda.set_device(torch.device("cuda:0"))
+     
+ def knn(x, src, k, transpose=False):
++    from pointops2.functions.pointops import knnquery
+     if transpose:
+         x = x.transpose(1, 2).contiguous()
+         src = src.transpose(1, 2).contiguous()
+@@ -183,6 +183,7 @@ def knn(x, src, k, transpose=False):
+     return idx.long(), dists.view(b, n, k)
+     
+ def fps(x, k):
++    from pointops2.functions.pointops import furthestsampling
+     b, n, _ = x.shape
+     x = x.view(-1, 3).contiguous()
+     offset = torch.full((b,), n, dtype=torch.long, device=x.device)

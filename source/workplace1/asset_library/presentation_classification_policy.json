@@ -1,0 +1,18 @@
+{
+  "updated": 1793706524.1444473,
+  "user_instruction": "电动车和自行车归为一类；保留旧13类",
+  "display_category": "骑行车辆（电动车／自行车）",
+  "display_code": "cycle_vehicle",
+  "preserve_subtypes": true,
+  "preserve_rider_presence": true,
+  "legacy_categories_unchanged": true,
+  "application": "Presentation classification; original pipeline category codes and payloads remain compatible",
+  "known_electric_uids": [
+    "rider_vehicle_20261030:web:niu_black",
+    "rider_vehicle_20261030:web:niu_blue"
+  ],
+  "original_categories": [
+    "bicycle"
+  ],
+  "unconfirmed_propulsion": "Keep separately pending identification; do not infer electric propulsion from scooter appearance"
+}

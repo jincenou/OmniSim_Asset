@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+source /mnt/ojc/workplace1/4danyone/waymo/grid4d/scripts/env.sh
+export GRID4D_EVQ=/mnt/ojc/workplace1/4danyone/waymo/grid4d/early_visual_query_20261019
+export TMPDIR="$GRID4D_EVQ/tmp"
+export TORCH_EXTENSIONS_DIR="$GRID4D_EVQ/cache/extensions"
+export GRID4D_HASH_BUILD="$GRID4D_EVQ/cache/extensions/hashencoder"
+export MPLCONFIGDIR="$GRID4D_EVQ/cache/matplotlib"
+export CUDA_CACHE_PATH="$GRID4D_EVQ/cache/cuda"
+export NUMBA_CACHE_DIR="$GRID4D_EVQ/cache/numba"
+export XDG_CACHE_HOME="$GRID4D_EVQ/cache/xdg"
+export OPENBLAS_NUM_THREADS=2
+export OMP_NUM_THREADS=2
+export MKL_NUM_THREADS=2

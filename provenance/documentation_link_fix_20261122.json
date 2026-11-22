@@ -1,0 +1,26 @@
+{
+  "reason": "Resolve three broken links using existing historical human documents, without editing or inventing report content.",
+  "added": [
+    {
+      "path": "source/DriveLab/docs/FOOT_MOTION_RESEARCH.md",
+      "source": "DriveLab/human/FOOT_MOTION_RESEARCH.md",
+      "sha256": "c704506979e858beff8738be35641259988989443096517bf10a205d1bafe6dd",
+      "bytes": 12975,
+      "publication_note": "Verbatim existing human documentation placed under docs/ to resolve a historical relative link; the original operations-history source is unchanged."
+    },
+    {
+      "path": "source/DriveLab/docs/TEMPORAL_VALIDATION.md",
+      "source": "DriveLab/human/TEMPORAL_VALIDATION.md",
+      "sha256": "ba2a56590b308af7dab6b688a25a0521454915221348168d933a5e3a247e9497",
+      "bytes": 4613,
+      "publication_note": "Verbatim existing human documentation placed under docs/ to resolve a historical relative link; the original operations-history source is unchanged."
+    },
+    {
+      "path": "source/DriveLab/human/TEMPORAL_VALIDATION.md",
+      "source": "DriveLab/human/TEMPORAL_VALIDATION.md",
+      "sha256": "ba2a56590b308af7dab6b688a25a0521454915221348168d933a5e3a247e9497",
+      "bytes": 4613
+    }
+  ],
+  "credential_pattern_matches": 0
+}

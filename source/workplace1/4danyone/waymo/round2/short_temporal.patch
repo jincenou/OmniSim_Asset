@@ -1,0 +1,20 @@
+--- a/fdanyone/model/conditioning.py
++++ b/fdanyone/model/conditioning.py
+@@ -28,7 +28,16 @@
+ PROMPT_CONTEXT_SHAPE = (1, 512, 4096)
+ PROMPT_CONTEXT_SOURCE_REPO = "Wan-AI/Wan2.1-T2V-1.3B"
+ PROMPT_CONTEXT_SOURCE_REVISION = "3f40b6dc4ca5c02dd23c9db74d9d2ccb82903b86"
+-POSE_FEATURE_SHAPE = (3072, 31, 40, 22)
++def pose_feature_shape(num_frames: int, height: int, width: int) -> tuple[int, int, int, int]:
++    """Match PoseEncoder temporal prefix/stride and Wan2.2 patch grid."""
++    if num_frames < 1 or num_frames > 121 or (num_frames - 1) % 4:
++        raise FourDAnyoneError("Experimental clip length must be 4n+1, in [1,121].")
++    if height % 32 or width % 32:
++        raise FourDAnyoneError("Pose grid requires spatial dimensions divisible by32.")
++    return 3072, (num_frames - 1) // 4 + 1, height // 32, width // 32
++
++
++POSE_FEATURE_SHAPE = pose_feature_shape(INFERENCE.num_frames, INFERENCE.height, INFERENCE.width)
+ POSE_ENCODER_BATCH_LIMIT = 6
+ 
+ 

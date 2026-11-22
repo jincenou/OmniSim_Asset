@@ -1,0 +1,9 @@
+"""Enforce replacement policy before reading a new reserve's source observations."""
+from pathlib import Path
+import json,datetime
+
+def verify(row,root):
+ if row.get('cohort')!='reserve':return
+ state=json.loads((root/'STATUS.json').read_text());selection=json.loads((root/'selection.json').read_text());rank=row['ordered_rank'];blocked=[c['sample_id'] for c in selection['reserve'] if c['ordered_rank']<rank and state['samples'].get(c['sample_id'],{}).get('state')=='blocked_frontend_infrastructure_review_required'];legal=[c['sample_id'] for c in selection['main']+selection['reserve'] if (root/'samples'/c['sample_id']/'generation/research/generated_validation.json').exists()];hard_main=[c['sample_id'] for c in selection['main'] if state['samples'].get(c['sample_id'],{}).get('state','').startswith('frontend_hard_failure')];legal_reserves=[c['sample_id'] for c in selection['reserve'] if c['sample_id'] in legal];allowed=not blocked and len(legal)<8 and len(legal_reserves)<len(hard_main)
+ record={'state':'admitted' if allowed else 'not_admitted','sample_id':row['sample_id'],'ordered_rank':rank,'earlier_unresolved_infrastructure_blockers':blocked,'legal24view_tracks':legal,'main_hardfailures_authorizing_replacement':hard_main,'legal_reserve_tracks':legal_reserves,'target_tracks':8,'rule':'Only common frontend hardfailure permits a replacement;infrastructure or backend failure doesnot. No source data is read on rejection.','observed_at':datetime.datetime.now(datetime.timezone.utc).isoformat()};p=root/'research'/f'{row["sample_id"]}_reserve_admission.json';t=p.with_suffix('.writing');t.write_text(json.dumps(record,indent=2)+'\n');t.replace(p)
+ if not allowed:raise RuntimeError('Reserve not admitted: unresolved earlier frontend infrastructure blocker or8legaltracks already generated')

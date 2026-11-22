@@ -1,0 +1,81 @@
+{
+  "snapshot_date": "2026-11-22",
+  "scope": "CPU source integrity, syntax, tool behavior and CLI help only; GPU pipelines and experiments were not rerun.",
+  "source_validation": {
+    "checked": {
+      "files": 1959,
+      "python": 1440,
+      "json": 111,
+      "shell": 348
+    },
+    "errors": [],
+    "scope": "CPU static validation only; no model imports, inference, or training"
+  },
+  "materialization_unit_tests": {
+    "passed": 3,
+    "output": "test_longest_prefix_and_no_cascading_rewrite (test_materialize_workspace.MaterializationTests.test_longest_prefix_and_no_cascading_rewrite) ... ok\ntest_plan_does_not_write_and_refuses_existing_file (test_materialize_workspace.MaterializationTests.test_plan_does_not_write_and_refuses_existing_file) ... ok\ntest_symlink_to_asset_library_is_rejected (test_materialize_workspace.MaterializationTests.test_symlink_to_asset_library_is_rejected) ... ok\n\n----------------------------------------------------------------------\nRan 3 tests in 0.002s\n\nOK"
+  },
+  "materialization_plan": {
+    "mode": "plan",
+    "files": 1956,
+    "remapped_files": 875,
+    "workspace_root": "/tmp/omnisim_release_final_20261122",
+    "mappings": {
+      "/mnt/ojc/miniconda3/envs": "/opt/conda/envs",
+      "/mnt/public_data": "/datasets",
+      "/mnt/ojc": "/tmp/omnisim_release_final_20261122"
+    },
+    "note": "Only source files; dependency code, data, assets, and runtime state are external."
+  },
+  "materialization_apply": {
+    "mode": "apply",
+    "files": 1956,
+    "remapped_files": 875,
+    "workspace_root": "/tmp/omnisim_release_final_20261122",
+    "mappings": {
+      "/mnt/ojc/miniconda3/envs": "/opt/conda/envs",
+      "/mnt/public_data": "/datasets",
+      "/mnt/ojc": "/tmp/omnisim_release_final_20261122"
+    },
+    "note": "Only source files; dependency code, data, assets, and runtime state are external."
+  },
+  "integrated_human_cli_help": {
+    "exit_code": 0,
+    "contains_usage": true
+  },
+  "production_human_cli_help": {
+    "exit_code": 0,
+    "contains_usage": true
+  },
+  "credential_pattern_scan": {
+    "matching_files": [],
+    "note": "Pattern-based check; no matched values logged."
+  },
+  "patch_validation": [
+    {
+      "name": "grid4d",
+      "applies_to_base": true,
+      "error": ""
+    },
+    {
+      "name": "4dgaussians",
+      "applies_to_base": true,
+      "error": ""
+    },
+    {
+      "name": "ftgs_round2",
+      "applies_to_base": true,
+      "error": ""
+    },
+    {
+      "name": "eff4d_backend",
+      "applies_to_base": true,
+      "error": ""
+    }
+  ],
+  "documentation_followup": {
+    "added_files": 3,
+    "secret_pattern_hits": 0,
+    "content": "Verbatim existing files; no code changes; previous materialization tests remain valid for tool behavior."
+  }
+}

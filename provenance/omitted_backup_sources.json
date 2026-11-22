@@ -1,0 +1,117 @@
+[
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/export.py",
+    "sha256": "98fe96c77712efd4b1c8f507f02378a78026b0531a90fd6e28308b1d4639f1e4",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/generation.py",
+    "sha256": "ab46925328c1c00497605230485c7be5fcfc59b2e6b74f834e0ccf8452cdeeab",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/pipeline.py",
+    "sha256": "9fa6e6f4ad180a334ea20e8f97d0481e2d376c971939aba9c7b9895a91cc7a95",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/real_views.py",
+    "sha256": "d6b992dc0c415d08cf46cfc4eaeabf31f9e5b2242f8b1b30f4ef73feea6f3507",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/rider_vehicle.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/vision.py",
+    "sha256": "90c528802a7097eda59faaa71b1c01afc5407041d4ab21daf25b9f68dbb9b8d5",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/asset_extraction/vlm.py",
+    "sha256": "330a3afcc548b62d071093d93aa5b6159a9c1cb6c376819a1b21801f0a0a1918",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/nuscenes/prepare_routes.py",
+    "sha256": "2ee7c67a8a1d60d6533ee4ac089da51683cc24300c6a4b33063d70d5d16e1bbe",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/before/tests/test_rider_vehicle.py",
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/export.py",
+    "sha256": "947f0ae587b41ae84c3c7d1c36dd864732e55acd29efbd45a70cc394dbcaded6",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/generation.py",
+    "sha256": "a17362074e17abd2c17d28f6b6f57bdcdab39ba924c43bf514713a2b2aca79a6",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/pipeline.py",
+    "sha256": "e5c7073fd191af22a050da3f8e96339cf6826c9fa6b5e97bb2608ff541245c6f",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/real_views.py",
+    "sha256": "599875cc2890737130427f531f70341bc0e777a2d26227722fd646cda7c50e38",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/rider_vehicle.py",
+    "sha256": "9dd4ea02088b33f663417601f328ac80a0b0c50f7f88d65aeb0ead93dcc6d185",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/vision.py",
+    "sha256": "e06762e4b95ed65e813cc8583ced6b47dffe6e023046e9474f2949da724c5599",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/asset_extraction/vlm.py",
+    "sha256": "934af619c26bf15dbc2c7bef0d91be5b9689eafa91041482c639a5cdecf35404",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/nuscenes/prepare_routes.py",
+    "sha256": "9508c3b9574d96b4d7054f10067dfa16f733b9992818af4075f602eea3f2d2cd",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_library/maintenance/rider_vehicle_20261102/process_archive/reports/main_integration/proposed/tests/test_rider_vehicle.py",
+    "sha256": "989661acd1ef2c9a59142fc1e2c31eef26cd58ec3a796702c3c4d3f3855793be",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_work/scene_production_20261031/validation/quality_policy_v2/before/0_export.py",
+    "sha256": "1b7040c54d2f3b7393d8d7f4b50143991c51d5971b57ca4b740b9add657454dc",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_work/scene_production_20261031/validation/quality_policy_v2/before/1_run.py",
+    "sha256": "2773baa665cee0a929f750b91bea52460429bd5e3538c14498fecdff6bff9073",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_work/scene_production_20261031/validation/quality_policy_v2/before/2_runtime.py",
+    "sha256": "55fee4487d982276ff5a03a5effb5328d6246c865756c211a6dbe787b7d64df0",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_work/scene_production_20261031/validation/quality_policy_v2/before/3_run.py",
+    "sha256": "c1c471221fb02f0dc6d274d16b5dfc2918d379caef1b01488478d6460d68c3b9",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  },
+  {
+    "source": "workplace1/asset_work/scene_production_20261031/validation/quality_policy_v2/before/4_metrics.py",
+    "sha256": "62ebea12d9768b4c10db62afa5809f366c0a221a55819250322682b0d60bef39",
+    "reason": "Integration before/proposed backup; maintained implementation already collected."
+  }
+]

@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+source /mnt/ojc/workplace1/4danyone/waymo/grid4d/scripts/env.sh
+export GRID4D_QUERY=/mnt/ojc/workplace1/4danyone/waymo/grid4d/query0_fused
+export TMPDIR="$GRID4D_QUERY/tmp"
+export TORCH_EXTENSIONS_DIR="$GRID4D_QUERY/cache/extensions"
+export GRID4D_HASH_BUILD="$GRID4D_QUERY/cache/extensions/hashencoder"
+export MPLCONFIGDIR="$GRID4D_QUERY/cache/matplotlib"
+export CUDA_CACHE_PATH="$GRID4D_QUERY/cache/cuda"
+export NUMBA_CACHE_DIR="$GRID4D_QUERY/cache/numba"
+export XDG_CACHE_HOME="$GRID4D_QUERY/cache/xdg"

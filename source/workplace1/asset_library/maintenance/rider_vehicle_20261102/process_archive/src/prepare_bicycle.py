@@ -1,0 +1,14 @@
+import json,sys
+from pathlib import Path
+W=Path(__file__).resolve().parents[1];sys.path.insert(0,str(W/'src/DriveLab'))
+from asset_extraction.io_utils import write_json
+from asset_extraction.rider_vehicle import prompt
+from asset_extraction.generation import prepare_jobs
+from nuscenes.prepare_routes import build_routes
+name=sys.argv[1];p=W/'packets'/name;packet=json.loads((p/'segmentation.json').read_text());anchor=packet['observations'][0];obs=anchor['source_observation'];attrs=json.loads((p/'attributes.json').read_text());pose=json.loads((p/'pose_review.json').read_text())
+assert pose['status']=='accepted_short_interval'
+a=dict(asset_kind='rider_vehicle_rigid',fixed_pose=True,rider_count=1,vehicle_subtype=attrs['vehicle_subtype'],propulsion_label='unknown',propulsion_evidence=[],pose_usage='riding',pose_description=attrs['pose_description'],rider_appearance=attrs['rider_appearance'],vehicle_appearance=attrs['vehicle_appearance'],hand_handlebar_contact='both hands remain on handlebar grips',seat_contact='hips supported by saddle',foot_support='feet held in the observed fixed positions on pedals',source_id=obs['instance'],shot_id=obs['scene']+':'+obs['camera'],identity=name,pose_cluster_id='native_short_interval_01',internal_articulation=False,wheel_animation=False,anchor_review=dict(accepted=True,complete_assembly=True,exactly_one_rider=True,seated=True,source='Visual inspection of native adjacent frames and joint SAM2 foreground'))
+row=dict(scene_id=obs['scene'],obj_id=name,category='bicycle',image_path=anchor['anchor_path']);row['prompts']=[prompt(dict(row,assembly=a))+' Preserve the bicycle, exactly two wheels and thin spokes. Maintain the observed saddle, handlebar, pedal and foot contacts. No motor scooter body, no extra wheel, no deployed parking stand.']
+run=W/'runs'/name;run.mkdir(exist_ok=True)
+source=dict(asset_id=name,category='bicycle',assembly=a,source=dict(dataset='nuScenes',instance_token=obs['instance'],anchor=obs,pose_review=pose,license='nuScenes dataset terms apply; source is local dataset imagery',vehicle_track_id=obs['instance'],rider_track_id=obs['instance']+':rider',identity_binding='Official combined cycle instance and visually verified rider'),real_images=[],real_view_selection=dict(real_count=0,preferred_count=[3,4],reason='Short stable-pose interval provides near-duplicate views; no pose-changing frames included',duplicate_padding=False))
+write_json(run/'scenes'/obs['scene']/'logs/export_items_full.json',[source]);write_json(run/'flux_input.json',[row]);routes=build_routes(run/'flux_input.json',run);write_json(run/'asset_routes.json',routes);b=prepare_jobs(run/'flux_input.json',run/'asset_routes.json',json.loads((W/'configs/generation.json').read_text()));(run/'F').mkdir(exist_ok=True);write_json(run/'F/jobs.json',b);write_json(p/'assembly.json',a);print(name,'prepared')

@@ -1,0 +1,22 @@
+[
+  {
+    "name": "grid4d",
+    "applies_to_base": true,
+    "error": ""
+  },
+  {
+    "name": "4dgaussians",
+    "applies_to_base": true,
+    "error": ""
+  },
+  {
+    "name": "ftgs_round2",
+    "applies_to_base": true,
+    "error": ""
+  },
+  {
+    "name": "eff4d_backend",
+    "applies_to_base": true,
+    "error": ""
+  }
+]

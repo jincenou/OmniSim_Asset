@@ -1,0 +1,21 @@
+--- official/train.py
++++ alpha_l1/train.py
+@@ -208,6 +208,18 @@
+         
+ 
+         loss = Ll1
++        # Isolated alpha-L1 ablation: supervise all pixels, including outside the target.
++        assert scene.dataset_type == "WaymoGenerated" and opt.lambda_alpha > 0
++        alpha_terms = []
++        for alpha_camera in viewpoint_cams:
++            predicted_alpha = render(alpha_camera, gaussians, pipe,
++                torch.zeros(3, device="cuda"), stage=stage, cam_type=scene.dataset_type,
++                override_color=torch.ones_like(gaussians.get_xyz))["render"][:1].clamp(0, 1)
++            target_alpha = alpha_camera.mask.cuda()
++            assert target_alpha.shape == predicted_alpha.shape
++            alpha_terms.append(torch.abs(predicted_alpha - target_alpha).mean())
++        alpha_l1 = torch.stack(alpha_terms).mean()
++        loss = loss + opt.lambda_alpha * alpha_l1
+         if stage == "fine" and hyper.time_smoothness_weight != 0:
+             # tv_loss = 0
+             tv_loss = gaussians.compute_regulation(hyper.time_smoothness_weight, hyper.l1_time_planes, hyper.plane_tv_weight)

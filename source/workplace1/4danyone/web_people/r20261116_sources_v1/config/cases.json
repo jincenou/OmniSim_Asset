@@ -1,0 +1,95 @@
+{
+  "QWH0002": {
+    "prepared_frames": 121,
+    "raw_input": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002/inputs/main.mp4",
+    "conditioning": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0002/preflight/conditioning",
+    "motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002/motion_pair/static_estimated",
+    "root_motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0002/preflight/root_motion.npz",
+    "source_dataset": "web",
+    "input_packet": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002",
+    "projection": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002/research/diagnostic_projection.npz",
+    "input_boundary": "Reviewed real web video; original-frame GVHMR then crop-K transformation, real PTS, predicted alpha, root-local 24-view conditions",
+    "selection": {
+      "id": "QWH0002",
+      "identity_key": "P5320110_1",
+      "package": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002",
+      "source": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/raw/P5320110.mp4",
+      "pose": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002/pose_preview.mp4",
+      "scene": "P5320110",
+      "rank_score": 0,
+      "qualitative_only": true,
+      "upstream_example": false
+    },
+    "manifest": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/data/QWH0002/fdanyone.json",
+    "config": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/config/QWH0002.json",
+    "input_review": {
+      "allow_generation": true,
+      "accessory": "no carried accessories visible",
+      "input_sha256": "75692a9205de0a91d36658ed04dd50f6f8c5a95238077e974c530223e28c75bf",
+      "review_evidence": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0002/research/input_visual_review.json",
+      "scope": "Three new candidates plus accepted QH-W05 and QH-W06; requested total five. Input review passed; frontend and final GS review still required."
+    }
+  },
+  "QWH0003": {
+    "prepared_frames": 121,
+    "raw_input": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003/inputs/main.mp4",
+    "conditioning": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0003/preflight/conditioning",
+    "motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003/motion_pair/static_estimated",
+    "root_motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0003/preflight/root_motion.npz",
+    "source_dataset": "web",
+    "input_packet": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003",
+    "projection": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003/research/diagnostic_projection.npz",
+    "input_boundary": "Reviewed real web video; original-frame GVHMR then crop-K transformation, real PTS, predicted alpha, root-local 24-view conditions",
+    "selection": {
+      "id": "QWH0003",
+      "identity_key": "UBC01_1",
+      "package": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003",
+      "source": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/raw/UBC01.mp4",
+      "pose": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003/pose_preview.mp4",
+      "scene": "UBC01",
+      "rank_score": 0,
+      "qualitative_only": true,
+      "upstream_example": false
+    },
+    "manifest": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/data/QWH0003/fdanyone.json",
+    "config": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/config/QWH0003.json",
+    "input_review": {
+      "allow_generation": true,
+      "accessory": "no carried accessories visible",
+      "input_sha256": "d6f83b0adc551f988feac7461c7f971adb2b460c2264ae92fc54c2391cc7724e",
+      "review_evidence": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0003/research/input_visual_review.json",
+      "scope": "Three new candidates plus accepted QH-W05 and QH-W06; requested total five. Input review passed; frontend and final GS review still required."
+    }
+  },
+  "QWH0004": {
+    "prepared_frames": 121,
+    "raw_input": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004/inputs/main.mp4",
+    "conditioning": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0004/preflight/conditioning",
+    "motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004/motion_pair/static_estimated",
+    "root_motion": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/frontend/QWH0004/preflight/root_motion.npz",
+    "source_dataset": "web",
+    "input_packet": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004",
+    "projection": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004/research/diagnostic_projection.npz",
+    "input_boundary": "Reviewed real web video; original-frame GVHMR then crop-K transformation, real PTS, predicted alpha, root-local 24-view conditions",
+    "selection": {
+      "id": "QWH0004",
+      "identity_key": "P13518524_2",
+      "package": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004",
+      "source": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/raw/P13518524.mp4",
+      "pose": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004/pose_preview.mp4",
+      "scene": "P13518524",
+      "rank_score": 0,
+      "qualitative_only": true,
+      "upstream_example": false
+    },
+    "manifest": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/data/QWH0004/fdanyone.json",
+    "config": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/config/QWH0004.json",
+    "input_review": {
+      "allow_generation": true,
+      "accessory": "no carried accessories visible",
+      "input_sha256": "a637074af7378b0a65acd8ad3788c6040b3b31e922eddecdc6430838473fdd14",
+      "review_evidence": "/mnt/ojc/workplace1/4danyone/web_people/r20261116_sources_v1/inputs/QWH0004/research/input_visual_review.json",
+      "scope": "Three new candidates plus accepted QH-W05 and QH-W06; requested total five. Input review passed; frontend and final GS review still required."
+    }
+  }
+}

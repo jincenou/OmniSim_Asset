@@ -1,0 +1,4 @@
+{
+  "rife_weights": "/mnt/ojc/workplace1/4danyone/waymo/rife_model/train_log/flownet.pkl",
+  "sam2_weights": "/mnt/ojc/workplace1/4danyone/waymo/segmentation/sam2.1_hiera_large.pt"
+}

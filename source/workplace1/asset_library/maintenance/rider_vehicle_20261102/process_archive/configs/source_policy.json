@@ -1,0 +1,23 @@
+{
+  "priority": "clear_web_video_then_clear_web_still",
+  "avoid": "blurry nuScenes and Waymo crops",
+  "quantity_cap": null,
+  "identity_deduplication": true,
+  "release_requires": [
+    "complete rider and vehicle",
+    "fixed contact pose",
+    "orbit quality review",
+    "actual scene insertion"
+  ],
+  "user_instruction": "After the current batch, use web sources for large scale generation",
+  "next_batches_source": "web_primary",
+  "dataset_policy": "Finish the current batch only; do not add blurry nuScenes/Waymo crops.",
+  "web_source_requirements": [
+    "record page URL, original media URL and usage/license status",
+    "native-resolution complete rider and vehicle; reject blur and clipped wheels",
+    "deduplicate the same rider/vehicle and adjacent frames",
+    "video: verify fixed relative pose; still image: explicitly mark temporal consistency unverified"
+  ],
+  "storage_root": "/mnt/ojc/workplace1/asset_library",
+  "gpu_policy": "Use available GPU memory and shared GPU leases; do not interrupt other tasks."
+}

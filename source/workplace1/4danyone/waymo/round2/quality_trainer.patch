@@ -1,0 +1,218 @@
+diff --git a/src/simple_trainer_freetime_4d_pure_relocation.py b/src/simple_trainer_freetime_4d_pure_relocation.py
+index a15b2cb..f3fb110 100644
+--- a/src/simple_trainer_freetime_4d_pure_relocation.py
++++ b/src/simple_trainer_freetime_4d_pure_relocation.py
+@@ -175,6 +175,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+ 
+ from datasets.FreeTime_dataset import FreeTimeParser, FreeTimeDataset, skip_none_collate
++from view_control import SamplingLedger
++from pathlib import Path
+ from foreground_loss import composite_foreground, foreground_mse_loss
+ from utils import knn, rgb_to_sh, set_random_seed
+ from init_common import read_init_arrays, apply_scene_transform
+@@ -282,6 +284,9 @@ class Config:
+     alpha_mode: Literal["ignore", "transparent"] = "ignore"
+     """Transparent mode requires straight RGBA and fits object opacity, including background."""
+ 
++    train_view_ids: Optional[List[int]] = None
++    validation_view_ids: Optional[List[int]] = None
++
+     test_every: int = 8
+     """Use every N-th camera for validation (others used for training)."""
+ 
+@@ -1057,13 +1062,17 @@ class FreeTime4DRunner:
+             start_frame=cfg.start_frame,
+             end_frame=cfg.end_frame,
+         )
+-        # Create test_set: every N-th camera for validation
+-        num_cameras = len(self.parser.camera_names)
+-        test_set = list(range(0, num_cameras, cfg.test_every))
+-        print(f"[FreeTime4D] Using {len(test_set)} cameras for validation (every {cfg.test_every}-th of {num_cameras})")
+-
+-        self.trainset = FreeTimeDataset(self.parser, split="train", test_set=test_set, alpha_mode=cfg.alpha_mode)
++        # This isolated experimental trainer requires actual camera IDs.
++        self.sampling_ledger = SamplingLedger(self.parser, cfg)
++        test_set = self.sampling_ledger.test
++        remove_set = self.sampling_ledger.remove
++        self.trainset = FreeTimeDataset(self.parser, split="train", test_set=test_set, remove_set=remove_set, alpha_mode=cfg.alpha_mode)
+         self.valset = FreeTimeDataset(self.parser, split="val", test_set=test_set, alpha_mode=cfg.alpha_mode)
++        actual_train = {int(self.parser.camera_ids[index])-1 for index in self.trainset.camera_indices}
++        actual_val = {int(self.parser.camera_ids[index])-1 for index in self.valset.camera_indices}
++        if actual_train != set(cfg.train_view_ids) or actual_val != set(cfg.validation_view_ids):
++            raise ValueError("Actual dataset camera split differs from declared experiment")
++        self.sampling_ledger.save(Path(cfg.result_dir) / "sampling_initial.json")
+         self.scene_scale = self.parser.scene_scale * 1.1 * cfg.global_scale
+         print(f"[FreeTime4D] Scene scale: {self.scene_scale}")
+         print(f"[FreeTime4D] Train: {len(self.trainset)}, Val: {len(self.valset)}")
+@@ -1172,6 +1181,10 @@ class FreeTime4DRunner:
+         ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=False)
+         validate_vanilla_checkpoint(ckpt)
+         state = ckpt.get("training_state")
++        if self.cfg.resume_mode == "resume":
++            if "sampling_ledger" not in ckpt:
++                raise ValueError("Controlled resume requires measured sampling counts; old baseline is a separate experiment")
++            self.sampling_ledger.restore(ckpt["sampling_ledger"], ckpt["step"])
+         if state and state.get("version") != 1:
+             raise ValueError("Unsupported checkpoint training-state version")
+         if state and self.cfg.resume_mode == "resume" and set(ckpt.get("optimizers", {})) != set(ckpt["splats"]):
+@@ -1275,6 +1288,7 @@ class FreeTime4DRunner:
+         minimum, maximum = self.duration_bounds
+         return dict(
+             step=step, use_velocity=self.cfg.use_velocity,
++            sampling_ledger=self.sampling_ledger.state(),
+             n_frames=self.cfg.end_frame - self.cfg.start_frame,
+             splats=self.splats.state_dict(),
+             optimizers={name: opt.state_dict() for name, opt in self.optimizers.items()},
+@@ -1817,9 +1831,8 @@ class FreeTime4DRunner:
+                 trainloader_iter = iter(trainloader)
+                 data = next(trainloader_iter)
+ 
+-            # Skip if entire batch had missing frames
+             if data is None:
+-                continue
++                raise RuntimeError("Missing training frame in controlled experiment")
+ 
+             camtoworlds = data["camtoworld"].to(device)
+             Ks = data["K"].to(device)
+@@ -1934,6 +1947,7 @@ class FreeTime4DRunner:
+                 opt.zero_grad(set_to_none=True)
+ 
+             self._project_temporal_params()
++            self.sampling_ledger.consumed(data, step)
+ 
+             # =====================================================================
+             # IMPORTANT: Densification disabled until ROMA init settles!
+@@ -2143,19 +2157,16 @@ class FreeTime4DRunner:
+                 with open(f"{self.stats_dir}/train_step{step:04d}.json", "w") as f:
+                     json.dump(stats, f)
+ 
++                if self.sampling_ledger.steps != step + 1:
++                    raise RuntimeError("Measured sample count differs from checkpoint step")
+                 torch.save(self.checkpoint(step), f"{self.ckpt_dir}/ckpt_{step}.pt")
++                self.sampling_ledger.save(Path(cfg.result_dir) / f"sampling_step{step}.json")
+ 
+                 if self.world_rank == 0:
+-                    try:
+-                        self.render_traj(step=step)
+-                    except Exception as error:
+-                        print(f"[Export] Trajectory video failed: {error}")
++                    self.render_traj(step=step)
+                     ply_steps = cfg.export_ply_steps if cfg.export_ply_steps is not None else cfg.save_steps
+                     if cfg.export_ply and (step + 1) in ply_steps:
+-                        try:
+-                            self.export_ply_sequence(step=step)
+-                        except Exception as error:
+-                            print(f"[Export] PLY export failed: {error}")
++                        self.export_ply_sequence(step=step)
+ 
+             # Evaluation
+             if step in [s - 1 for s in cfg.eval_steps]:
+@@ -2277,7 +2288,7 @@ class FreeTime4DRunner:
+         # Auto-compute time frames from frame range if not specified
+         if cfg.render_traj_time_frames is None:
+             # Auto: use number of frames in the dataset
+-            n_time_frames = cfg.end_frame - cfg.start_frame + 1
++            n_time_frames = cfg.end_frame - cfg.start_frame
+             print(f"  Auto time frames: {n_time_frames} (from start_frame={cfg.start_frame} to end_frame={cfg.end_frame})")
+         elif cfg.render_traj_time_frames == 0:
+             # Old behavior: same as camera frames
+@@ -2286,22 +2297,11 @@ class FreeTime4DRunner:
+             # Use specified value
+             n_time_frames = cfg.render_traj_time_frames
+ 
+-        # Smart frame selection: always produce exactly 50 video frames
+-        # If >100 frames: take middle 100-frame window
+-        # Sample 50 evenly spaced time points from the window
+-        max_time_window = 100
+-        n_video_frames = 50  # Fixed output: 50 frames
+-
+-        if n_time_frames <= max_time_window:
+-            # Use full time range [0, 1]
+-            time_start = 0.0
+-            time_end = 1.0
+-        else:
+-            # Take middle 100 frames worth of time
+-            center_ratio = 0.5
+-            half_window_ratio = (max_time_window / 2) / n_time_frames
+-            time_start = max(0.0, center_ratio - half_window_ratio)
+-            time_end = min(1.0, center_ratio + half_window_ratio)
++        # Honor the requested sample count and preserve the entire time interval.
++        # end_frame is exclusive throughout the dataset and initialization paths.
++        n_video_frames = n_time_frames
++        time_start = 0.0
++        time_end = 1.0
+ 
+         print(f"  Smart sampling: {n_video_frames} video frames (time range [{time_start:.3f}, {time_end:.3f}])")
+ 
+diff --git a/src/view_control.py b/src/view_control.py
+new file mode 100644
+index 0000000..1c0bf8d
+--- /dev/null
++++ b/src/view_control.py
+@@ -0,0 +1,65 @@
++"""Explicit camera split and counts of samples actually optimized, not prefetched."""
++import hashlib
++import json
++from pathlib import Path
++import numpy as np
++
++
++def camera_split(parser, train_ids, validation_ids):
++    ids=[int(value)-1 for value in parser.camera_ids]
++    if len(set(ids))!=len(ids):raise ValueError('Camera records are not unique')
++    if not train_ids or not validation_ids:raise ValueError('Explicit nonempty training and validation camera IDs required')
++    train=set(train_ids);val=set(validation_ids)
++    if len(train)!=len(train_ids) or len(val)!=len(validation_ids):raise ValueError('Duplicate camera IDs')
++    if train & val:raise ValueError('Training/validation camera overlap')
++    if (train|val)-set(ids):raise ValueError('Requested camera ID missing from actual parser')
++    test=[index for index,value in enumerate(ids) if value in val]
++    remove=[index for index,value in enumerate(ids) if value not in train|val]
++    return test,remove,ids
++
++
++def data_fingerprint(cfg):
++    paths=[Path(cfg.init_npz_path),*sorted((Path(cfg.data_dir)/'sparse/0').glob('*'))]
++    hashes={str(p.resolve()):hashlib.sha256(p.read_bytes()).hexdigest() for p in paths if p.is_file()}
++    return {'data_dir':str(Path(cfg.data_dir).resolve()),'frame_range':[cfg.start_frame,cfg.end_frame],
++            'data_factor':cfg.data_factor,'files':hashes,
++            'rgb_alpha_integrity':'Dataset content comes from fixed common master; this fingerprint covers initialization and COLMAP, not every RGBA byte'}
++
++
++class SamplingLedger:
++    def __init__(self,parser,cfg):
++        self.test,self.remove,self.ids=camera_split(parser,cfg.train_view_ids,cfg.validation_view_ids)
++        self.train=sorted(cfg.train_view_ids);self.validation=sorted(cfg.validation_view_ids)
++        self.frames=cfg.end_frame-cfg.start_frame
++        self.counts=np.zeros((len(self.ids),self.frames),dtype=np.int64)
++        self.steps=0
++        self.fingerprint=data_fingerprint(cfg)
++
++    def consumed(self,data,step):
++        if step!=self.steps:raise ValueError(f'Noncontiguous optimizer steps: {step} vs {self.steps}')
++        camera=int(data['camera_id'].item());index=int(data['camera_idx'].item());frame=int(data['frame_offset'].item())
++        if camera not in self.train or self.ids[index]!=camera or not 0<=frame<self.frames:
++            raise ValueError('Actual optimized sample violates declared camera/time split')
++        self.counts[index,frame]+=1;self.steps+=1
++
++    def state(self):
++        return {'version':1,'camera_ids':self.ids,'train_camera_ids':self.train,'validation_camera_ids':self.validation,
++                'frame_count':self.frames,'optimized_steps':self.steps,'counts_by_camera_and_frame':self.counts.tolist(),
++                'fingerprint':self.fingerprint,'count_scope':'Incremented after optimizer.step; excludes DataLoader prefetch and evaluation'}
++
++    def restore(self,state,checkpoint_step):
++        current=self.state()
++        for key in ('version','camera_ids','train_camera_ids','validation_camera_ids','frame_count','fingerprint'):
++            if state[key]!=current[key]:raise ValueError(f'Resume changes controlled experiment: {key}')
++        counts=np.asarray(state['counts_by_camera_and_frame'])
++        if counts.shape!=self.counts.shape or counts.dtype.kind not in 'iu' or (counts<0).any():
++            raise ValueError('Invalid sampling counts')
++        if int(counts.sum())!=checkpoint_step+1 or state['optimized_steps']!=checkpoint_step+1:
++            raise ValueError('Sampling counts do not cover the saved optimizer steps')
++        excluded=[index for index,value in enumerate(self.ids) if value not in self.train]
++        if counts[excluded].any():raise ValueError('Saved counts show validation or excluded cameras were trained')
++        self.counts=counts.astype(np.int64);self.steps=checkpoint_step+1
++
++    def save(self,path):
++        path=Path(path);tmp=path.with_suffix('.tmp')
++        tmp.write_text(json.dumps(self.state(),indent=2,allow_nan=False)+'\n');tmp.replace(path)

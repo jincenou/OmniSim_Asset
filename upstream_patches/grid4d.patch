@@ -1,0 +1,121 @@
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 6c97ad6..8c006be 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -118,6 +118,7 @@ def render(viewpoint_camera, pc: GaussianModel, pipe, bg_color: torch.Tensor, d_
+     # Those Gaussians that were frustum culled or had a radius of 0 were not visible.
+     # They will be excluded from value updates used in the splitting criteria.
+     return {"render": rendered_image,
++            "world_means": means3D,
+             "viewspace_points": screenspace_points,
+             "visibility_filter": radii > 0,
+             "radii": radii,
+diff --git a/hashencoder/backend.py b/hashencoder/backend.py
+index b7a9044..9ca0148 100644
+--- a/hashencoder/backend.py
++++ b/hashencoder/backend.py
+@@ -3,22 +3,23 @@ import os
+ from torch.utils.cpp_extension import load
+ from pathlib import Path
+ 
+-Path('./tmp_build/').mkdir(parents=True, exist_ok=True)
++_build_dir = Path(os.environ['GRID4D_HASH_BUILD'])
++_build_dir.mkdir(parents=True, exist_ok=True)
+ 
+ _src_path = os.path.dirname(os.path.abspath(__file__))
+ 
+ _backend = load(name='_hash_encoder',
+-                extra_cflags=['-O3', '-std=c++14'],
++                extra_cflags=['-O3', '-std=c++17'],
+                 extra_cuda_cflags=[
+-                    '-O3', '-std=c++14', '-allow-unsupported-compiler',
++                    '-O3', '-std=c++17', '-allow-unsupported-compiler',
+                     '-U__CUDA_NO_HALF_OPERATORS__', '-U__CUDA_NO_HALF_CONVERSIONS__', '-U__CUDA_NO_HALF2_OPERATORS__',
+                 ],
+                 sources=[os.path.join(_src_path, 'src', f) for f in [
+                     'hashencoder.cu',
+                     'bindings.cpp',
+                 ]],
+-                build_directory='./tmp_build/',
++                build_directory=str(_build_dir),
+                 verbose=True,
+                 )
+ 
+-__all__ = ['_backend']
+\ No newline at end of file
++__all__ = ['_backend']
+diff --git a/scene/cameras.py b/scene/cameras.py
+index c2d54ae..fa39646 100644
+--- a/scene/cameras.py
++++ b/scene/cameras.py
+@@ -28,12 +28,7 @@ class Camera(nn.Module):
+         self.FoVy = FoVy
+         self.image_name = image_name
+ 
+-        try:
+-            self.data_device = torch.device(data_device)
+-        except Exception as e:
+-            print(e)
+-            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device")
+-            self.data_device = torch.device("cuda")
++        self.data_device = torch.device(data_device)
+ 
+         self.original_image = image.clamp(0.0, 1.0).to(self.data_device)
+         self.fid = torch.Tensor(np.array([fid])).to(self.data_device)
+diff --git a/train.py b/train.py
+index eb1b930..e4fb451 100644
+--- a/train.py
++++ b/train.py
+@@ -50,15 +50,21 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
+     scene = Scene(dataset, gaussians)
+     gaussians.training_setup(opt)
+ 
+-    bg_color = [1, 1, 1] if dataset.white_background else [0, 0, 0]
++    # Explicit dataset adaptation: reference and prediction share this background.
++    bg_color = [dataset.background_value] * 3
+     background = torch.tensor(bg_color, dtype=torch.float32, device="cuda")
+ 
+     viewpoint_stack = None
++    first_iteration = 1
++    if globals().get('_study_resume') is not None:
++        first_iteration, viewpoint_stack = _study_resume(scene, gaussians, deform)
+     ema_loss_for_log = 0.0
+     best_psnr = 0.0
+     best_iteration = 0
+     progress_bar = tqdm(range(opt.iterations), desc="Training progress")
+-    for iteration in range(1, opt.iterations + 1):
++    for iteration in range(first_iteration, opt.iterations + 1):
++        if globals().get('_study_before_iteration') is not None:
++            _study_before_iteration(iteration, viewpoint_stack, gaussians, deform)
+ 
+         # Every 1000 its we increase the levels of SH up to a maximum degree
+         if iteration % 1000 == 0:
+@@ -107,6 +113,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
+         Ll1 = l1_loss(image, gt_image)
+         loss = (1.0 - opt.lambda_dssim) * Ll1 + opt.lambda_dssim * (1.0 - ssim(image, gt_image)) + reg
+         loss.backward()
++        if globals().get('_study_after_backward') is not None:
++            _study_after_backward(iteration, viewpoint_cam, gaussians, deform, render_pkg_re, loss)
+ 
+         if dataset.load2gpu_on_the_fly:
+             viewpoint_cam.load2device('cpu')
+@@ -145,6 +153,8 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
+                 print("\n[ITER {}] Saving Gaussians".format(iteration))
+                 scene.save(iteration)
+                 deform.save_weights(args.model_path, iteration)
++                if globals().get('_study_saved') is not None:
++                    _study_saved(iteration, scene, gaussians, deform)
+ 
+             # Densification
+             if iteration < opt.densify_until_iter:
+@@ -167,6 +177,10 @@ def training(dataset, opt, pipe, testing_iterations, saving_iterations):
+                 deform.optimizer.zero_grad()
+                 deform.update_learning_rate(iteration)
+ 
++            if globals().get('_study_after_iteration') is not None:
++                _study_after_iteration(iteration, viewpoint_cam, gaussians, deform, loss,
++                                       iteration < opt.iterations, viewpoint_stack)
++
+     print("Best PSNR = {} in Iteration {}".format(best_psnr, best_iteration))
+ 
+ 

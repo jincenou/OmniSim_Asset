@@ -1,0 +1,122 @@
+diff --git a/data_loaders/humanml/common/quaternion.py b/data_loaders/humanml/common/quaternion.py
+index e2daa00..5051507 100644
+--- a/data_loaders/humanml/common/quaternion.py
++++ b/data_loaders/humanml/common/quaternion.py
+@@ -10,7 +10,7 @@ import numpy as np
+ 
+ _EPS4 = np.finfo(float).eps * 4.0
+ 
+-_FLOAT_EPS = np.finfo(np.float).eps
++_FLOAT_EPS = np.finfo(float).eps
+ 
+ # PyTorch-backed implementations
+ def qinv(q):
+diff --git a/data_loaders/humanml/scripts/motion_process.py b/data_loaders/humanml/scripts/motion_process.py
+index 9b9d96f..a1be275 100644
+--- a/data_loaders/humanml/scripts/motion_process.py
++++ b/data_loaders/humanml/scripts/motion_process.py
+@@ -68,15 +68,15 @@ def extract_features(positions, feet_thre, n_raw_offsets, kinematic_chain, face_
+         feet_l_y = (positions[1:, fid_l, 1] - positions[:-1, fid_l, 1]) ** 2
+         feet_l_z = (positions[1:, fid_l, 2] - positions[:-1, fid_l, 2]) ** 2
+         #     feet_l_h = positions[:-1,fid_l,1]
+-        #     feet_l = (((feet_l_x + feet_l_y + feet_l_z) < velfactor) & (feet_l_h < heightfactor)).astype(np.float)
+-        feet_l = ((feet_l_x + feet_l_y + feet_l_z) < velfactor).astype(np.float)
++        #     feet_l = (((feet_l_x + feet_l_y + feet_l_z) < velfactor) & (feet_l_h < heightfactor)).astype(float)
++        feet_l = ((feet_l_x + feet_l_y + feet_l_z) < velfactor).astype(float)
+ 
+         feet_r_x = (positions[1:, fid_r, 0] - positions[:-1, fid_r, 0]) ** 2
+         feet_r_y = (positions[1:, fid_r, 1] - positions[:-1, fid_r, 1]) ** 2
+         feet_r_z = (positions[1:, fid_r, 2] - positions[:-1, fid_r, 2]) ** 2
+         #     feet_r_h = positions[:-1,fid_r,1]
+-        #     feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor) & (feet_r_h < heightfactor)).astype(np.float)
+-        feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor)).astype(np.float)
++        #     feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor) & (feet_r_h < heightfactor)).astype(float)
++        feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor)).astype(float)
+         return feet_l, feet_r
+ 
+     #
+@@ -273,15 +273,15 @@ def process_file(positions, feet_thre):
+         feet_l_y = (positions[1:, fid_l, 1] - positions[:-1, fid_l, 1]) ** 2
+         feet_l_z = (positions[1:, fid_l, 2] - positions[:-1, fid_l, 2]) ** 2
+         #     feet_l_h = positions[:-1,fid_l,1]
+-        #     feet_l = (((feet_l_x + feet_l_y + feet_l_z) < velfactor) & (feet_l_h < heightfactor)).astype(np.float)
+-        feet_l = ((feet_l_x + feet_l_y + feet_l_z) < velfactor).astype(np.float)
++        #     feet_l = (((feet_l_x + feet_l_y + feet_l_z) < velfactor) & (feet_l_h < heightfactor)).astype(float)
++        feet_l = ((feet_l_x + feet_l_y + feet_l_z) < velfactor).astype(float)
+ 
+         feet_r_x = (positions[1:, fid_r, 0] - positions[:-1, fid_r, 0]) ** 2
+         feet_r_y = (positions[1:, fid_r, 1] - positions[:-1, fid_r, 1]) ** 2
+         feet_r_z = (positions[1:, fid_r, 2] - positions[:-1, fid_r, 2]) ** 2
+         #     feet_r_h = positions[:-1,fid_r,1]
+-        #     feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor) & (feet_r_h < heightfactor)).astype(np.float)
+-        feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor)).astype(np.float)
++        #     feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor) & (feet_r_h < heightfactor)).astype(float)
++        feet_r = (((feet_r_x + feet_r_y + feet_r_z) < velfactor)).astype(float)
+         return feet_l, feet_r
+     #
+     feet_l, feet_r = foot_detect(positions, feet_thre)
+diff --git a/model/mdm_unet.py b/model/mdm_unet.py
+index 17dd151..eae795d 100644
+--- a/model/mdm_unet.py
++++ b/model/mdm_unet.py
+@@ -590,6 +590,8 @@ class MDM_UNET(nn.Module):
+                  keyframe_conditioned=False,
+                  keyframe_selection_scheme='in-between',
+                  zero_keyframe_loss=False,
++                 load_smpl=True,
++                 clip_download_root=None,
+                  **kwargs):
+         super().__init__()
+ 
+@@ -612,6 +614,7 @@ class MDM_UNET(nn.Module):
+ 
+         self.ablation = ablation
+         self.clip_dim = clip_dim
++        self.clip_download_root = clip_download_root
+         self.action_emb = kwargs.get('action_emb', None)
+ 
+         self.keyframe_conditioned = keyframe_conditioned
+@@ -701,7 +704,9 @@ class MDM_UNET(nn.Module):
+                                                 self.latent_dim)
+                 print('EMBED ACTION')
+ 
+-        self.rot2xyz = Rotation2xyz(device='cpu', dataset=self.dataset)
++        if not load_smpl and self.data_rep != 'hml_vec':
++            raise ValueError("Disabling unused SMPL conversion requires hml_vec representation")
++        self.rot2xyz = Rotation2xyz(device='cpu', dataset=self.dataset) if load_smpl else None
+ 
+     def parameters_wo_clip(self):
+         return [
+@@ -712,6 +717,7 @@ class MDM_UNET(nn.Module):
+     def load_and_freeze_clip(self, clip_version):
+         clip_model, clip_preprocess = clip.load(
+             clip_version, device='cpu',
++            download_root=self.clip_download_root,
+             jit=False)  # Must set jit=False for training
+         clip.model.convert_weights(
+             clip_model
+@@ -850,11 +856,15 @@ class MDM_UNET(nn.Module):
+ 
+     def _apply(self, fn):
+         super()._apply(fn)
+-        self.rot2xyz.smpl_model._apply(fn)
++        if self.rot2xyz is not None:
++            self.rot2xyz.smpl_model._apply(fn)
++        return self
+ 
+     def train(self, *args, **kwargs):
+         super().train(*args, **kwargs)
+-        self.rot2xyz.smpl_model.train(*args, **kwargs)
++        if self.rot2xyz is not None:
++            self.rot2xyz.smpl_model.train(*args, **kwargs)
++        return self
+ 
+ 
+ class PositionalEncoding(nn.Module):
+@@ -967,4 +977,4 @@ class EmbedAction(nn.Module):
+     def forward(self, input):
+         idx = input[:, 0].to(torch.long)  # an index array must be long
+         output = self.action_embedding[idx]
+-        return output
+\ No newline at end of file
++        return output

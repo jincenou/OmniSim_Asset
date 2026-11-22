@@ -1,0 +1,21 @@
+export EFF4D_ROOT=/mnt/ojc/workplace1/4danyone/eff4d
+export EFF4D_ENV=/mnt/ojc/miniconda3/envs/eff4d
+export HF_HOME="$EFF4D_ROOT/cache/huggingface"
+export TORCH_HOME="$EFF4D_ROOT/cache/torch"
+export TORCH_EXTENSIONS_DIR="$EFF4D_ROOT/cache/torch_extensions"
+export TRITON_CACHE_DIR="$EFF4D_ROOT/cache/triton"
+export XDG_CACHE_HOME="$EFF4D_ROOT/cache/xdg"
+export PIP_CACHE_DIR="$EFF4D_ROOT/cache/pip"
+export CONDA_PKGS_DIRS="$EFF4D_ROOT/cache/conda"
+export TMPDIR="$EFF4D_ROOT/tmp"
+export MPLCONFIGDIR="$EFF4D_ROOT/cache/matplotlib"
+export NUMBA_CACHE_DIR="$EFF4D_ROOT/cache/numba"
+export PYTHONDONTWRITEBYTECODE=1
+export PYTHONNOUSERSITE=1
+export MAX_JOBS=2 OMP_NUM_THREADS=2 MKL_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2
+export CUDA_DEVICE_ORDER=PCI_BUS_ID
+export PATH="$EFF4D_ENV/bin:$PATH"
+export CUDA_HOME="$EFF4D_ROOT/cache/cuda118"
+export PATH="$CUDA_HOME/bin:$PATH"
+export LD_LIBRARY_PATH="$CUDA_HOME/lib:${LD_LIBRARY_PATH:-}"
+export TORCH_CUDA_ARCH_LIST=8.9

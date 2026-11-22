@@ -1,0 +1,20 @@
+{
+  "format": "drivelab_hf_rigid_v1",
+  "release": "releases/rigid",
+  "reference": {
+    "schema_version": 1,
+    "manifest_type": "drivelab_asset",
+    "path_policy": "repository_relative_single_asset_path",
+    "scale_policy": {
+      "description": "Place with isotropic scale s = scale_m / size_xyz[scale_axis]. Rigid: scale_axis is argmax(size_xyz), scale_m is the matching est length/width/height. Human: scale_axis=z, scale_m=est_height_m.",
+      "axis_to_est": {
+        "x": "length_m",
+        "y": "width_m",
+        "z": "height_m"
+      }
+    },
+    "heading_policy": {
+      "description": "Rigid canonical.heading is the asset-local front axis after canonicalization (typically +X for vehicles/signs). Omitted when undefined. Humans use person.yaw_deg_start instead."
+    }
+  }
+}

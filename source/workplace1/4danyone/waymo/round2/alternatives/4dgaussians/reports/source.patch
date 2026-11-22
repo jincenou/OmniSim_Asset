@@ -1,0 +1,194 @@
+diff --git a/gaussian_renderer/__init__.py b/gaussian_renderer/__init__.py
+index 3c612ee..00412ae 100644
+--- a/gaussian_renderer/__init__.py
++++ b/gaussian_renderer/__init__.py
+@@ -24,10 +24,8 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor,
+  
+     # Create zero tensor. We will use it to make pytorch return gradients of the 2D (screen-space) means
+     screenspace_points = torch.zeros_like(pc.get_xyz, dtype=pc.get_xyz.dtype, requires_grad=True, device="cuda") + 0
+-    try:
++    if torch.is_grad_enabled():
+         screenspace_points.retain_grad()
+-    except:
+-        pass
+ 
+     # Set up rasterization configuration
+     
+@@ -120,7 +118,7 @@ def render(viewpoint_camera, pc : GaussianModel, pipe, bg_color : torch.Tensor,
+     rendered_image, radii, depth = rasterizer(
+         means3D = means3D_final,
+         means2D = means2D,
+-        shs = shs_final,
++        shs = shs_final if colors_precomp is None else None,
+         colors_precomp = colors_precomp,
+         opacities = opacity,
+         scales = scales_final,
+diff --git a/scene/__init__.py b/scene/__init__.py
+index e298d59..765d832 100644
+--- a/scene/__init__.py
++++ b/scene/__init__.py
+@@ -42,7 +42,16 @@ class Scene:
+         self.train_cameras = {}
+         self.test_cameras = {}
+         self.video_cameras = {}
+-        if os.path.exists(os.path.join(args.source_path, "sparse")):
++        if os.path.exists(os.path.join(args.source_path, "fdanyone.json")):
++            from scene.waymo_generated import read_waymo_generated
++            scene_info, self.waymo_manifest = read_waymo_generated(args.source_path)
++            dataset_type = "WaymoGenerated"
++            import numpy as np
++            self.waymo_sampling = {
++                stage: np.zeros((24, self.waymo_manifest["frame_count"]), dtype=np.int64)
++                for stage in ("coarse", "fine")
++            }
++        elif os.path.exists(os.path.join(args.source_path, "sparse")):
+             scene_info = sceneLoadTypeCallbacks["Colmap"](args.source_path, args.images, args.eval, args.llffhold)
+             dataset_type="colmap"
+         elif os.path.exists(os.path.join(args.source_path, "transforms_train.json")):
+@@ -76,6 +85,10 @@ class Scene:
+         # self.video_camera = cameraList_from_camInfos(scene_info.video_cameras,-1,args)
+         xyz_max = scene_info.point_cloud.points.max(axis=0)
+         xyz_min = scene_info.point_cloud.points.min(axis=0)
++        if dataset_type == "WaymoGenerated":
++            import numpy as np
++            xyz_min = np.asarray(self.waymo_manifest["motion_aabb_min"], dtype=np.float32)
++            xyz_max = np.asarray(self.waymo_manifest["motion_aabb_max"], dtype=np.float32)
+         if args.add_points:
+             print("add points.")
+             # breakpoint()
+@@ -101,10 +114,13 @@ class Scene:
+             point_cloud_path = os.path.join(self.model_path, "point_cloud/iteration_{}".format(iteration))
+         self.gaussians.save_ply(os.path.join(point_cloud_path, "point_cloud.ply"))
+         self.gaussians.save_deformation(point_cloud_path)
++        if self.dataset_type == "WaymoGenerated":
++            with open(os.path.join(point_cloud_path, "sampling.json"), "w") as handle:
++                json.dump({name: counts.tolist() for name, counts in self.waymo_sampling.items()}, handle)
+     def getTrainCameras(self, scale=1.0):
+         return self.train_camera
+ 
+     def getTestCameras(self, scale=1.0):
+         return self.test_camera
+     def getVideoCameras(self, scale=1.0):
+-        return self.video_camera
+\ No newline at end of file
++        return self.video_camera
+diff --git a/scene/cameras.py b/scene/cameras.py
+index 8c17ff6..5bbdcfe 100644
+--- a/scene/cameras.py
++++ b/scene/cameras.py
+@@ -30,12 +30,7 @@ class Camera(nn.Module):
+         self.FoVy = FoVy
+         self.image_name = image_name
+         self.time = time
+-        try:
+-            self.data_device = torch.device(data_device)
+-        except Exception as e:
+-            print(e)
+-            print(f"[Warning] Custom device {data_device} failed, fallback to default cuda device" )
+-            self.data_device = torch.device("cuda")
++        self.data_device = torch.device(data_device)
+         self.original_image = image.clamp(0.0, 1.0)[:3,:,:]
+         # breakpoint()
+         # .to(self.data_device)
+diff --git a/scene/dataset.py b/scene/dataset.py
+index 7e13cb9..871638b 100644
+--- a/scene/dataset.py
++++ b/scene/dataset.py
+@@ -19,6 +19,8 @@ class FourDGSdataset(Dataset):
+     def __getitem__(self, index):
+         # breakpoint()
+ 
++        if self.dataset_type == "WaymoGenerated":
++            return self.dataset[index]
+         if self.dataset_type != "PanopticSports":
+             try:
+                 image, w2c, time = self.dataset[index]
+diff --git a/scene/deformation.py b/scene/deformation.py
+index b87ffce..ad6ec42 100644
+--- a/scene/deformation.py
++++ b/scene/deformation.py
+@@ -2,7 +2,6 @@ import functools
+ import math
+ import os
+ import time
+-from tkinter import W
+ 
+ import numpy as np
+ import torch
+@@ -228,4 +227,4 @@ def poc_fre(input_data,poc_buf):
+     input_data_sin = input_data_emb.sin()
+     input_data_cos = input_data_emb.cos()
+     input_data_emb = torch.cat([input_data, input_data_sin,input_data_cos], -1)
+-    return input_data_emb
+\ No newline at end of file
++    return input_data_emb
+diff --git a/scene/gaussian_model.py b/scene/gaussian_model.py
+index 918c5e5..7d2b141 100644
+--- a/scene/gaussian_model.py
++++ b/scene/gaussian_model.py
+@@ -14,7 +14,6 @@ import numpy as np
+ from utils.general_utils import inverse_sigmoid, get_expon_lr_func, build_rotation
+ from torch import nn
+ import os
+-import open3d as o3d
+ from utils.system_utils import mkdir_p
+ from plyfile import PlyData, PlyElement
+ from random import randint
+diff --git a/submodules/simple-knn b/submodules/simple-knn
+--- a/submodules/simple-knn
++++ b/submodules/simple-knn
+@@ -1 +1 @@
+-Subproject commit 44f764299fa305faf6ec5ebd99939e0508331503
++Subproject commit 44f764299fa305faf6ec5ebd99939e0508331503-dirty
+diff --git a/train.py b/train.py
+index 973f822..e1100c7 100644
+--- a/train.py
++++ b/train.py
+@@ -106,7 +106,7 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
+                             # 
+     count = 0
+     for iteration in range(first_iter, final_iter+1):        
+-        if network_gui.conn == None:
++        if scene.dataset_type != "WaymoGenerated" and network_gui.conn == None:
+             network_gui.try_connect()
+         while network_gui.conn != None:
+             try:
+@@ -178,6 +178,9 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
+         visibility_filter_list = []
+         viewspace_point_tensor_list = []
+         for viewpoint_cam in viewpoint_cams:
++            if scene.dataset_type == "WaymoGenerated":
++                assert viewpoint_cam.source_view not in scene.waymo_manifest["heldout_views"]
++                scene.waymo_sampling[stage][viewpoint_cam.source_view, viewpoint_cam.source_frame] += 1
+             render_pkg = render(viewpoint_cam, gaussians, pipe, background, stage=stage,cam_type=scene.dataset_type)
+             image, viewspace_point_tensor, visibility_filter, radii = render_pkg["render"], render_pkg["viewspace_points"], render_pkg["visibility_filter"], render_pkg["radii"]
+             images.append(image.unsqueeze(0))
+@@ -216,10 +219,9 @@ def scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_i
+         #     lpipsloss = lpips_loss(image_tensor,gt_image_tensor,lpips_model)
+         #     loss += opt.lambda_lpips * lpipsloss
+         
++        if not torch.isfinite(loss).all():
++            raise FloatingPointError(f"Non-finite {stage} loss at iteration {iteration}")
+         loss.backward()
+-        if torch.isnan(loss).any():
+-            print("loss is nan,end training, reexecv program now.")
+-            os.execv(sys.executable, [sys.executable] + sys.argv)
+         viewspace_point_tensor_grad = torch.zeros_like(viewspace_point_tensor)
+         for idx in range(0, len(viewspace_point_tensor_list)):
+             viewspace_point_tensor_grad = viewspace_point_tensor_grad + viewspace_point_tensor_list[idx].grad
+@@ -308,6 +310,15 @@ def training(dataset, hyper, opt, pipe, testing_iterations, saving_iterations, c
+     scene_reconstruction(dataset, opt, hyper, pipe, testing_iterations, saving_iterations,
+                          checkpoint_iterations, checkpoint, debug_from,
+                          gaussians, scene, "fine", tb_writer, opt.iterations,timer)
++    if scene.dataset_type == "WaymoGenerated":
++        reference = {}
++        with torch.no_grad():
++            for frame in (0, 60, 120):
++                camera = scene.getTestCameras()[frame]
++                reference[f"view0_frame{frame}"] = render(camera, gaussians, pipe,
++                    torch.zeros(3, device="cuda"), stage="fine", cam_type=scene.dataset_type)["render"].cpu().numpy()
++        np.savez(os.path.join(scene.model_path, "reference_render.npz"), **reference)
++        tb_writer.close()
+ 
+ def prepare_output_and_logger(expname):    
+     if not args.model_path:

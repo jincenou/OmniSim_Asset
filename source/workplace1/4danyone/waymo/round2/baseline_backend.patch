@@ -1,0 +1,41 @@
+diff --git a/src/simple_trainer_freetime_4d_pure_relocation.py b/src/simple_trainer_freetime_4d_pure_relocation.py
+index a15b2cb..e9616d1 100644
+--- a/src/simple_trainer_freetime_4d_pure_relocation.py
++++ b/src/simple_trainer_freetime_4d_pure_relocation.py
+@@ -2277,7 +2277,7 @@ class FreeTime4DRunner:
+         # Auto-compute time frames from frame range if not specified
+         if cfg.render_traj_time_frames is None:
+             # Auto: use number of frames in the dataset
+-            n_time_frames = cfg.end_frame - cfg.start_frame + 1
++            n_time_frames = cfg.end_frame - cfg.start_frame
+             print(f"  Auto time frames: {n_time_frames} (from start_frame={cfg.start_frame} to end_frame={cfg.end_frame})")
+         elif cfg.render_traj_time_frames == 0:
+             # Old behavior: same as camera frames
+@@ -2286,22 +2286,11 @@ class FreeTime4DRunner:
+             # Use specified value
+             n_time_frames = cfg.render_traj_time_frames
+ 
+-        # Smart frame selection: always produce exactly 50 video frames
+-        # If >100 frames: take middle 100-frame window
+-        # Sample 50 evenly spaced time points from the window
+-        max_time_window = 100
+-        n_video_frames = 50  # Fixed output: 50 frames
+-
+-        if n_time_frames <= max_time_window:
+-            # Use full time range [0, 1]
+-            time_start = 0.0
+-            time_end = 1.0
+-        else:
+-            # Take middle 100 frames worth of time
+-            center_ratio = 0.5
+-            half_window_ratio = (max_time_window / 2) / n_time_frames
+-            time_start = max(0.0, center_ratio - half_window_ratio)
+-            time_end = min(1.0, center_ratio + half_window_ratio)
++        # Honor the requested sample count and preserve the entire time interval.
++        # end_frame is exclusive throughout the dataset and initialization paths.
++        n_video_frames = n_time_frames
++        time_start = 0.0
++        time_end = 1.0
+ 
+         print(f"  Smart sampling: {n_video_frames} video frames (time range [{time_start:.3f}, {time_end:.3f}])")
+ 

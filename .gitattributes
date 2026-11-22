@@ -1,0 +1,3 @@
+* text=auto
+# Keep source snapshot hashes identical across checkout platforms.
+source/** -text

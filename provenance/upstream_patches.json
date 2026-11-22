@@ -1,0 +1,61 @@
+[
+  {
+    "name": "grid4d",
+    "source_path": "workplace1/4danyone/waymo/grid4d/source",
+    "upstream_url": "https://github.com/JiaweiXu8/Grid4D.git",
+    "base_commit": "2e08174f0a989cb19b51a80aeedd0d155524e6a5",
+    "patch": "upstream_patches/grid4d.patch",
+    "overlay_files": [],
+    "patch_sha256": "9e66958b9a4e85bbbe0cb18e672d583b7d70886e2025ea8fea4c2657d8561f7b",
+    "base_commit_is_local_import": true,
+    "upstream_commit": "3ab7b74482910d22fba7d51ac60c8cae1fe24bf1",
+    "note": "base_commit is a local provenance import of upstream_commit, recorded in its commit message. It is not a remote branch identifier. The patch was checked against the local imported base; run git apply --check after checking out upstream_commit."
+  },
+  {
+    "name": "4dgaussians",
+    "source_path": "workplace1/4danyone/waymo/round2/alternatives/4dgaussians/repo",
+    "upstream_url": "https://github.com/hustvl/4DGaussians.git",
+    "base_commit": "843d5ac636c37e4b611242287754f3d4ed150144",
+    "patch": "upstream_patches/4dgaussians.patch",
+    "overlay_files": [
+      {
+        "path": "upstream_patches/overlays/4dgaussians/scene/waymo_generated.py",
+        "relative_to_dependency": "scene/waymo_generated.py",
+        "sha256": "a979739c267b6e8566aeac96ada6eb626534bd88d022953dff9510e3caf0a3d2"
+      }
+    ],
+    "patch_sha256": "dcfa2f3e610f1d3782e3685c6c79e3a4d744be29fe52c77788f2c6850be31dd3"
+  },
+  {
+    "name": "ftgs_round2",
+    "source_path": "workplace1/4danyone/waymo/round2/backend",
+    "upstream_url": "https://github.com/OpsiClear-4DGS/FreeTimeGsVanilla.git",
+    "base_commit": "1f160e290b00d88e097739ecc26d93500d6c55e8",
+    "patch": "upstream_patches/ftgs_round2.patch",
+    "overlay_files": [
+      {
+        "path": "upstream_patches/overlays/ftgs_round2/src/view_control.py",
+        "relative_to_dependency": "src/view_control.py",
+        "sha256": "9ad54b530ad63e22ee1410a5b85d2ecd7e556952bc6095a5bf58b655e9552075"
+      }
+    ],
+    "patch_sha256": "84184824de3ccb7e0e9e734c217d0bca8609b8a552928a719ff762994b3fec23"
+  },
+  {
+    "name": "eff4d_backend",
+    "source_path": "workplace1/4danyone/eff4d/repos/4d-gaussian-splatting",
+    "upstream_url": "https://github.com/fudan-zvg/4d-gaussian-splatting.git",
+    "base_commit": "35b67b062d60ca5a28f6a5fab677a2e0b4d5cb87",
+    "patch": "upstream_patches/eff4d_backend.patch",
+    "overlay_files": [],
+    "patch_sha256": "d5706f423cabff53fd71701bdfc58c9f6b9028be0f8bf6a9a22e3e06033e370d"
+  },
+  {
+    "name": "efficient4d",
+    "source_path": "workplace1/4danyone/eff4d/repos/Efficient4D",
+    "upstream_url": "https://github.com/fudan-zvg/Efficient4D.git",
+    "base_commit": "0d5bb0d58a9dbfc0a297aba81b4fa3afeb20bb2b",
+    "patch": null,
+    "overlay_files": []
+  }
+]

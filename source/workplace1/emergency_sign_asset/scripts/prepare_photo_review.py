@@ -1,0 +1,9 @@
+import json,shutil
+from pathlib import Path
+W=Path(__file__).resolve().parents[1]
+r=W/'runs/P07_B0';g=json.loads((r/'generation/generation.json').read_text());row=g['assets'][0];review=dict(accepted=False,reviewer='Codex native source/FLUX comparison',sign_metadata_sha256=row['sign_metadata_sha256'],reason='FLUX invented a bolted metal mounting flange and changed post/base construction; base nearly touches image boundary',images=[dict(generated_sha256=row['stages']['flux']['images'][0]['sha256'],mask_accepted=False)])
+(r/'generation/asset_00000/flux_review.json').write_text(json.dumps(review,indent=2))
+n=W/'runs/P07_retry_B0';n.mkdir(exist_ok=True);shutil.copytree(r/'scenes',n/'scenes',dirs_exist_ok=True);rows=json.loads((r/'flux_input.json').read_text());rows[0]['prompts'][0]+=' The post is yellow square PVC inserted directly into a slot in the heavy molded base. NO new bolted steel flange, NO screws at the base, NO additional cutouts or material replacement. Preserve existing tiny slots. Maintain margins around the entire base.'
+(n/'flux_input.json').write_text(json.dumps(rows,indent=2));routes=json.loads((r/'routes.json').read_text());(n/'routes.json').write_text(json.dumps(routes,indent=2))
+rows=[dict(image_path=str(W/'runs/P08_B0/generation/asset_00000/flux_0.png'),output=str(W/'runs/P08_B0/generation/asset_00000/segmented'),crop_box=[260,30,740,1024],parts=[dict(box=[280,49,713,487],points=[[510,260]],labels=[1]),dict(box=[285,476,720,706],points=[[510,600]],labels=[1]),dict(box=[480,467,541,910],points=[[510,785]],labels=[1]),dict(box=[387,860,668,1024],points=[[535,952]],labels=[1])])]
+(W/'runs/segment_photo_flux.json').write_text(json.dumps(rows));s=json.loads((W/'runs/segment_photos_job.json').read_text());s['gpus']=[0];s['command'][-1]=str(W/'runs/segment_photo_flux.json');s['log']=str(W/'runs/segment_photo_flux.log');(W/'runs/segment_photo_flux_job.json').write_text(json.dumps(s))

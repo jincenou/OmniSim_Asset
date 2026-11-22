@@ -1,0 +1,582 @@
+--- a/asset_extraction/bank.py
++++ b/asset_extraction/bank.py
+@@ -12,6 +12,7 @@
+ 
+ from .generation import sha256
+ from .io_utils import read_json, write_json
++from .rider_vehicle import assembly
+ 
+ 
+ def publish(state, library: Path, *, dataset: str, scene_id: str):
+@@ -21,6 +22,15 @@
+         if result['status'] not in {'keep', 'review'} or 'entry' not in result:
+             continue
+         row = deepcopy(result['entry'])
++        combo = assembly(row)
++        if combo and row['status'] == 'keep':
++            from .export import _verified_heading
++            if (not _verified_heading(row['canonical'].get('heading'))
++                    or not row['quality'].get('wheel_support_verified')
++                    or not row['quality'].get('assembly_structure_verified')
++                    or not row.get('metric_scale_evidence')
++                    or row['scale'].get('scale_confidence') not in {'medium', 'high'}):
++                raise ValueError('Kept assembly requires heading, wheel support, structure and metric evidence')
+         uid = f'{dataset}:{scene_id}:{row["uid"]}'
+         token = hashlib.sha256(uid.encode()).hexdigest()[:16]
+         group = Path('rigid') / ('_review' if row['status']=='review' else '') / row['category']
+@@ -57,10 +67,14 @@
+                 include(row['provenance']['source_image'], 'refs/source.png')
+                 for i, image in enumerate(row['provenance']['real_images']):
+                     include(image['rgba_path'], f'refs/real_{i}.png')
++                if combo:
++                    include(row.get('raw_path', row['source_path']), 'raw.ply')
++                    write_json(stage/'assembly.json', combo)
+                 quality = row['quality']
+                 include(quality.get('audit_image'), 'previews/source_and_renders.jpg')
+                 for key in ('evidence','heading_evidence'):
+                     include(quality['rendering'].get(key), f'previews/{key}.jpg')
++                include(quality['rendering'].get('turntable'), 'previews/turntable.mp4')
+                 def local(value):
+                     if isinstance(value, dict):
+                         return {k:local(v) for k,v in value.items()}
+@@ -76,6 +90,8 @@
+                     canonical_transform_already_applied=True, canonical_bounds_size=row['canonical']['size_xyz'],
+                     estimated_metric_dimensions=row['scale'],
+                     metric_scale_applied=False, target_scene=None, trajectory=None,
++                    assembly=combo, insertion_validation=row.get('insertion_validation'),
++                    metric_scale_evidence=row.get('metric_scale_evidence'),
+                     note='Apply one isotropic scale and a target-scene pose. Dimensions are estimates; source camera is provenance, not an insertion pose.'))
+                 write_json(stage/'package.json', dict(uid=uid, signature=signature,
+                     files={str(p.relative_to(stage)):sha256(p) for p in stage.rglob('*') if p.is_file()}))
+--- a/asset_extraction/export.py
++++ b/asset_extraction/export.py
+@@ -23,6 +23,7 @@
+ from plyfile import PlyData
+ 
+ from .real_views import VEHICLES
++from .rider_vehicle import assembly, is_assembly
+ from .io_utils import read_json, write_json
+ 
+ LEGACY_ROOT = Path('/mnt/wmj/workspace4/pipeline')
+@@ -67,8 +68,8 @@
+                 quaternion_norm_min_max=[float(norms.min()), float(norms.max())])
+ 
+ 
+-def _needs_heading(category):
+-    return category in VEHICLES or category == 'traffic_sign' or category in FACING_CATEGORIES
++def _needs_heading(category, assembly_metadata=None):
++    return assembly_metadata is not None or category in VEHICLES or category == 'traffic_sign' or category in FACING_CATEGORIES
+ 
+ 
+ def _verified_heading(heading, *, semantic_face=False):
+@@ -85,7 +86,7 @@
+ 
+ 
+ def canonicalize_raw(source: str | Path, target: str | Path, *, route: str,
+-                     category: str, heading: dict | None = None,
++                     category: str, heading: dict | None = None, assembly_metadata: dict | None = None,
+                      legacy_root: str | Path = LEGACY_ROOT) -> dict:
+     """Use the original Gaussian transform/grounding, with explicit backend up.
+ 
+@@ -96,6 +97,8 @@
+     Omitting it produces a usable review payload with unresolved front, never
+     a falsely verified orientation. Metric scale is not baked into the PLY.
+     """
++    if assembly_metadata is not None:
++        assembly(dict(category=category, assembly=assembly_metadata))
+     source, target = Path(source), Path(target)
+     if route not in {'H', 'B0'}:
+         raise ValueError(f'Unknown reconstruction route: {route}')
+@@ -115,8 +118,8 @@
+             yaw = np.deg2rad(-heading['azimuth_deg'])
+             c, s = np.cos(yaw), np.sin(yaw)
+             rotation = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]]) @ rotation
+-    elif _needs_heading(category):
+-        mode = 'long_axis' if category in VEHICLES else 'normal_axis'
++    elif _needs_heading(category, assembly_metadata):
++        mode = 'long_axis' if assembly_metadata or category in VEHICLES else 'normal_axis'
+         rotation = _yaw_rotation(gaussians, mode, up_rotation=rotation) @ rotation
+         if heading is not None:
+             if (heading.get('front') not in {'A', 'B'}
+@@ -180,7 +183,7 @@
+             size = np.asarray(canonical['size_xyz'], dtype=float)
+             if size.shape != (3,) or not np.isfinite(size).all() or np.any(size <= 0):
+                 raise ValueError('Canonical size_xyz must contain three positive extents')
+-            if row['status'] == 'keep' and _needs_heading(category):
++            if row['status'] == 'keep' and _needs_heading(category, row.get('assembly')):
+                 if not _verified_heading(canonical.get('heading'), semantic_face=category in FACING_CATEGORIES):
+                     raise ValueError('Kept heading-sensitive asset needs a resolved canonical front')
+             if row['status'] == 'keep':
+@@ -289,6 +292,14 @@
+         sheet.paste(Image.fromarray(frame), (x, y+24))
+         draw.text((x+6, y+5), f'{index*22.5:g} deg', fill='black')
+     sheet.save(output / 'evidence.jpg', quality=92)
++    frame_dir = output / 'frames'
++    frame_dir.mkdir(exist_ok=True)
++    for index, frame in enumerate(frames):
++        Image.fromarray(frame).save(frame_dir / f'{index:03d}.png')
++    import subprocess
++    subprocess.run(['ffmpeg', '-hide_banner', '-loglevel', 'error', '-y', '-framerate', '4',
++        '-i', str(frame_dir / '%03d.png'), '-c:v', 'libx264', '-pix_fmt', 'yuv420p',
++        str(output / 'turntable.mp4')], check=True)
+     ends = Image.new('RGB', (size*2, size+24), '#cccccc')
+     ends.paste(Image.fromarray(frames[0]), (0, 24))
+     ends.paste(Image.fromarray(frames[8]), (size, 24))
+@@ -299,7 +310,7 @@
+     audit = dict(ply_sha256=_sha(source), resolution=size, azimuths_deg=(angles*180/np.pi).tolist(),
+                  elevation_deg=12, foreground_alpha_threshold=.01,
+                  foreground_pixels=foreground, all_16_nonempty=all(count > 0 for count in foreground),
+-                 evidence=str((output / 'evidence.jpg').resolve()),
++                 turntable=str((output / 'turntable.mp4').resolve()), evidence=str((output / 'evidence.jpg').resolve()),
+                  heading_evidence=str((output / 'heading.jpg').resolve()),
+                  loader='asset_extraction.gaussians.load_rigid', renderer='gsplat.rasterization')
+     (output / 'render.json').write_text(json.dumps(audit, indent=2) + '\n')
+@@ -480,12 +491,13 @@
+             if axis_path.exists():
+                 raise FileExistsError(f'Uncommitted canonicalization exists: {axis_path}')
+             canonical = canonicalize_raw(source, axis_path, route=row['route'], category=row['category'],
+-                                         legacy_root=legacy_root)
++                                         legacy_root=legacy_root, assembly_metadata=row.get('assembly'))
+             rendering = await render(axis_path, directory / 'axis_render')
+             heading = None
+             decisions = {}
+             decision_path = directory / 'decisions.json'
+-            needs_heading = _needs_heading(row['category'])
++            combo = assembly(row)
++            needs_heading = _needs_heading(row['category'], combo)
+             semantic_face = row['category'] in FACING_CATEGORIES
+             if semantic_face:
+                 decision = await ask('The 4 by 4 contact sheet shows one traffic light at 16 azimuths. '
+@@ -502,7 +514,7 @@
+                 if decision['view_index'] >= 0:
+                     heading['azimuth_deg'] = decision['view_index'] * 22.5
+                     canonical = canonicalize_raw(source, directory / 'canonical.ply', route=row['route'],
+-                        category=row['category'], heading=heading, legacy_root=legacy_root)
++                        category=row['category'], heading=heading, legacy_root=legacy_root, assembly_metadata=row.get('assembly'))
+                     rendering = await render(Path(canonical['canonical_path']), directory / 'canonical_render')
+                     heading['verification'] = await ask('These are opposite views of the rotated traffic light. '
+                         'A looks from canonical +X and B from -X. Which view directly shows its functional colored '
+@@ -515,7 +527,7 @@
+                     canonical['heading'] = deepcopy(heading)
+                     canonical['heading_verified'] = _verified_heading(heading, semantic_face=True)
+             elif needs_heading:
+-                kind = 'vehicle front with headlights/windshield/hood' if row['category'] in VEHICLES else 'readable sign face'
++                kind = ('vehicle forward end identified by front wheel/fork, headlight and handlebar structure, NEVER rider face' if combo else ('vehicle front with headlights/windshield/hood' if row['category'] in VEHICLES else 'readable sign face'))
+                 heading = await ask(f'Two renders A and B show opposite ends of one {row["category"]}. '
+                     f'Which shows the {kind}? Use unknown if unclear. Do not guess; confidence is 0..1.',
+                     rendering['heading_evidence'], HEADING_SCHEMA, index)
+@@ -524,7 +536,7 @@
+                 if heading['front'] != 'unknown':
+                     heading.update(source=f'{config.vlm.model}; heading image SHA256={_sha(Path(rendering["heading_evidence"]))}')
+                     canonical = canonicalize_raw(source, directory / 'canonical.ply', route=row['route'],
+-                        category=row['category'], heading=heading, legacy_root=legacy_root)
++                        category=row['category'], heading=heading, legacy_root=legacy_root, assembly_metadata=row.get('assembly'))
+                     rendering = await render(Path(canonical['canonical_path']), directory / 'canonical_render')
+             prompt = (f'Inspect a reconstructed 3D Gaussian rigid asset of category {row["category"]}. '
+                 'Return only a concise, strict JSON object. Give at most 5 defects, each at most 160 characters; '
+@@ -548,12 +560,14 @@
+                 'numbers in meters, never 0. Use low confidence for ambiguous subtype or uncertain size; '
+                 'uncertainty does not mean a zero-sized object. '
+                 'Do not inflate confidence to pass quality checks. usable_as is a list of suitable driving-scenario roles.')
++            if combo:
++                prompt += (' This is one fixed seated rider and two-wheel vehicle assembly. Require exactly one complete person AND complete vehicle, plausible hands on handlebars, hips on seat and feet on footrests. Reject missing/duplicated limbs, separated rider, fused or missing wheels, severe back-side defects or changed riding pose. Identity variation tolerance does not apply. Dimensions cover the full assembly including rider head; manufacturer unoccupied vehicle height is not assembly height. Ground support is tires, never the face or a dangling foot.')
+             audit_image = _audit_sheet(row['image_path'], rendering['evidence'], directory / 'source_and_renders.jpg')
+             audit = await ask(prompt, audit_image, AUDIT_SCHEMA, index)
+             decisions['quality'] = audit
+             write_json(decision_path, decisions)
+             _validate_sources(row)
+-            vehicle_policy = row['category'] in VEHICLES
++            vehicle_policy = row['category'] in VEHICLES and not combo
+             status = _verdict(audit, rendering, heading, needs_heading, semantic_face=semantic_face,
+                               allow_identity_variation=vehicle_policy)
+             canonical['sha256'] = _sha(Path(canonical['canonical_path']))
+@@ -576,8 +590,16 @@
+                              response_format=os.environ.get('VLM_RESPONSE_FORMAT', 'json_schema'),
+                              audit_image=str(audit_image), audit_image_sha256=_sha(audit_image),
+                              rendering=rendering, scale_source='VLM subtype estimate; not a metric measurement'))
++            if combo:
++                entry['assembly'] = combo
++                entry['provenance']['assembly'] = combo
++                entry['provenance']['assembly_policy'] = row.get('assembly_policy')
++                entry['quality']['ground_support_review'] = 'pending wheel-contact verification'
++                if status == 'keep':
++                    status = entry['status'] = 'review'
++                    entry['reason'] = 'Assembly requires explicit wheel support and metric-scale evidence before keep'
+             if status == 'review':
+-                entry['reason'] = 'Required heading or metric-scale confidence is insufficient'
++                entry.setdefault('reason', 'Required heading or metric-scale confidence is insufficient')
+             result = dict(status=status, entry=entry, canonical_sha256=canonical['sha256'])
+         except Exception as exc:
+             result = dict(status='failed', error=f'{type(exc).__name__}: {exc}')
+--- a/asset_extraction/generation.py
++++ b/asset_extraction/generation.py
+@@ -13,6 +13,7 @@
+ 
+ from .io_utils import read_json, write_json, validate_manifest_item
+ from .real_views import VEHICLES
++from .rider_vehicle import assembly, uses_h, POLICY_VERSION, validate_reference, validate_flux_review
+ 
+ PREFIX = "ASSET_RESULT "
+ ROOT = Path(__file__).resolve().parents[1]
+@@ -120,7 +121,8 @@
+     for item_index, row in enumerate(rows):
+         validate_manifest_item(row)
+         route = index[row["obj_id"]]
+-        expected = "H" if row["category"].lower() in VEHICLES else "B0"
++        combo = assembly(dict(row, assembly=route.get("assembly")))
++        expected = "H" if uses_h(dict(row, assembly=combo)) else "B0"
+         if (route["route"], route["category"], route["scene_id"]) != (expected, row["category"], row["scene_id"]):
+             raise ValueError("Route/category/scene mismatch: " + row["obj_id"])
+         real = route["real_images"]
+@@ -128,14 +130,17 @@
+             raise ValueError("H accepts 0..4 real images; B0 takes generated views only")
+         if routing.get('schema_version') == 2 and any(not r.get('quality_review', {}).get('accepted') for r in real):
+             raise ValueError('Unapproved real evidence in reviewed routes')
++        for image in real:
++            validate_reference(dict(row, assembly=combo), image)
+         hashes = [sha256(image["rgba_path"]) for image in real]
+         if hashes != [image["sha256"] for image in real] or len(hashes) != len(set(hashes)):
+             raise ValueError("Changed or duplicated real evidence: " + row["obj_id"])
+         jobs.append(dict(item_index=item_index, **row, route=expected, real_images=real,
+                          source=route["source"], real_view_selection=route["real_view_selection"],
+                          input_mode='flux_plus_real' if real else 'flux_only',
+-                         image_sha256=sha256(row["image_path"])))
+-    code = [Path(__file__), Path(__file__).with_name("flux.py"),
++                         image_sha256=sha256(row["image_path"]),
++                         **(dict(assembly=combo, assembly_policy=POLICY_VERSION) if combo else {})))
++    code = [Path(__file__), Path(__file__).with_name("flux.py"), Path(__file__).with_name("rider_vehicle.py"),
+             Path(config["legacy_root"]) / "trellis/pipelines/trellis_image_to_3d.py",
+             Path(config["recon_root"]) / "trellis/pipelines/trellis_image_to_3d.py"]
+     signature = digest(dict(config=config, jobs=jobs, code={str(p): sha256(p) for p in code}))
+@@ -355,12 +360,31 @@
+             else:
+                 flux_result = read_json(work / "generation.json")["assets"][index]["stages"]["flux"]
+                 checked_outputs(flux_result)
++                validate_flux_review(row, flux_result)
+                 paths = [r["path"] for r in flux_result["images"]] + [r["rgba_path"] for r in row["real_images"]]
+                 images = [rembg.remove(Image.open(r["path"]).convert("RGB"), session=session) for r in flux_result["images"]]
+                 images += [Image.open(r["rgba_path"]).convert("RGBA") for r in row["real_images"]]
+                 if any((np.asarray(im.getchannel("A")) > 204).sum() < 16 or np.all(np.asarray(im.getchannel("A")) == 255) for im in images):
+                     raise ValueError("Reconstruction requires valid segmented foregrounds")
++                pre_dir = output / ('preprocess_' + stage)
++                pre_dir.mkdir(exist_ok=True)
++                if assembly(row):
++                    # Reviewed joint-alpha evidence is required; never silently accept person-only rembg.
++                    approved = row.get('flux_segmented_images', [])
++                    if len(approved) != len(flux_result['images']):
++                        raise ValueError('Assembly needs reviewed FLUX union-alpha images')
++                    images = []
++                    for original, segmented in zip(flux_result['images'], approved):
++                        if (segmented['flux_sha256'] != original['sha256'] or sha256(segmented['path']) != segmented['sha256']
++                                or segmented.get('complete_assembly') is not True):
++                            raise ValueError('FLUX joint-alpha evidence changed or is unreviewed')
++                        images.append(Image.open(segmented['path']).convert('RGBA'))
++                    images += [Image.open(r['rgba_path']).convert('RGBA') for r in row['real_images']]
+                 prepared = [pipe.preprocess_image(im) for im in images]
++                for number, (before, after) in enumerate(zip(images, prepared)):
++                    before.save(pre_dir / f'{number:02d}_alpha.png')
++                    after.save(pre_dir / f'{number:02d}_model.png')
++                print(f'INFERENCE_START stage={stage} obj_id={row["obj_id"]} views={len(prepared)}', flush=True)
+                 with torch.no_grad():
+                     if stage == "H":
+                         outputs, _, _ = pipe.run(prepared, seed=config["seed"], formats=["gaussian"], preprocess_image=False)
+--- a/asset_extraction/pipeline.py
++++ b/asset_extraction/pipeline.py
+@@ -482,7 +482,7 @@
+                             "vlm": result})
+             continue
+         item["category"] = "car" if category == "vehicle" else category
+-        item["prompts"] = build_diffusion_prompts(item, result)
++        item["prompts"] = build_diffusion_prompts(dict(item, assembly=source_by_id.get(str(item["obj_id"]), {}).get("assembly")), result)
+         validate_manifest_item(item)
+         normalized.append(item)
+     write_manifest(manifest_path, normalized)
+--- a/asset_extraction/real_views.py
++++ b/asset_extraction/real_views.py
+@@ -75,6 +75,7 @@
+     from pathlib import Path
+     from .io_utils import read_json, write_json
+     from .vlm import AsyncOpenAIClient, rigid_vlm_messages
++    from .rider_vehicle import assembly, validate_reference, POLICY_VERSION
+     routes = deepcopy(routes)
+     cache_path = Path(cache_path)
+     cached = read_json(cache_path) if cache_path.exists() else {'decisions': {}}
+@@ -87,6 +88,8 @@
+ 
+     async def one(route, reference):
+         async with semaphore:
++            combo = assembly(route)
++            validate_reference(route, reference)
+             rgba_hash = hashlib.sha256(Path(reference['rgba_path']).read_bytes()).hexdigest()
+             if rgba_hash != reference['sha256']:
+                 raise ValueError('Real reference changed before review')
+@@ -94,7 +97,7 @@
+             source_hash = hashlib.sha256(Path(reference['source_image']).read_bytes()).hexdigest()
+             key = hashlib.sha256(json.dumps(dict(rgba=rgba_hash, source=source_hash,
+                 bbox=reference['bbox_xyxy'], pixels=pixels, policy=REFERENCE_POLICY, code=code_hash,
+-                client=client_hash, model=config.vlm.model, temperature=config.vlm.temperature,
++                assembly=combo, assembly_policy=POLICY_VERSION, client=client_hash, model=config.vlm.model, temperature=config.vlm.temperature,
+                 response_format=os.environ.get('VLM_RESPONSE_FORMAT', 'json_schema')), sort_keys=True).encode()).hexdigest()
+             if key not in decisions:
+                 decision = dict(reference_sha256=rgba_hash, source_sha256=source_hash, pixels=pixels,
+@@ -120,6 +123,8 @@
+                         'A high SAM confidence does not prove completeness. Use unknown/uncertain where needed. '
+                         'Return only the requested JSON fields; reason is one concise sentence. Do not assess '
+                         'whether an image generator could hallucinate missing parts; assess the observed evidence.')
++                    if combo:
++                        messages[0]['content'][0]['text'] += (' For this target, target_is_vehicle means the WHOLE seated rider and motorcycle/bicycle assembly. Require exactly one rider, head, torso, hands, feet, handlebars, frame and visible wheels. Allow self-occlusion. Reject a person-only or vehicle-only mask or unrelated pedestrian. The intended fixed pose is: ' + combo['pose_description'] + '. Major features are rider silhouette, seat contact, wheel/frame structure; windows/hood are NOT required. A rider plus their own vehicle is one functional unit, not unrelated combined objects.')
+                     try:
+                         decision['review'] = await client.call_json(messages, response_schema=REFERENCE_SCHEMA)
+                         decision['accepted'] = reference_verdict(decision['review'])
+--- a/asset_extraction/rider_vehicle.py
++++ b/asset_extraction/rider_vehicle.py
+@@ -0,0 +1,96 @@
++"""Opt-in fixed rider/vehicle contract; ordinary motorcycles keep their old route."""
++from copy import deepcopy
++
++POLICY_VERSION = 'rider_vehicle_rigid_v1'
++KINDS = {'motorcycle', 'bicycle'}
++PROPULSION = {'electric_confirmed', 'electric_probable', 'unknown', 'non_electric'}
++
++
++def assembly(record):
++    value = record.get('assembly')
++    if value is None:
++        return None
++    if not isinstance(value, dict) or value.get('asset_kind') != 'rider_vehicle_rigid':
++        raise ValueError('Unknown assembly contract')
++    required = {'fixed_pose', 'rider_count', 'vehicle_subtype', 'propulsion_label',
++        'propulsion_evidence', 'pose_usage', 'pose_description', 'rider_appearance',
++        'vehicle_appearance', 'hand_handlebar_contact', 'seat_contact', 'foot_support',
++        'source_id', 'shot_id', 'identity', 'pose_cluster_id', 'internal_articulation',
++        'wheel_animation', 'anchor_review'}
++    missing = required - value.keys()
++    if missing:
++        raise ValueError('Incomplete assembly metadata: ' + ', '.join(sorted(missing)))
++    if record.get('category') not in KINDS:
++        raise ValueError('Rider assemblies require motorcycle or bicycle category')
++    if (value['fixed_pose'] is not True or type(value['rider_count']) is not int
++            or value['rider_count'] != 1 or value['internal_articulation'] is not False
++            or value['wheel_animation'] is not False):
++        raise ValueError('Require exactly one fixed rider with no internal articulation')
++    if value['propulsion_label'] not in PROPULSION or value['pose_usage'] not in {'riding', 'stopped', 'uncertain'}:
++        raise ValueError('Invalid propulsion or pose usage')
++    if value['propulsion_label'] == 'electric_confirmed' and not value['propulsion_evidence']:
++        raise ValueError('Confirmed electric requires evidence')
++    for name in ['source_id', 'shot_id', 'identity', 'pose_cluster_id']:
++        if not isinstance(value[name],str) or not value[name].strip():
++            raise ValueError('Missing assembly identity: ' + name)
++    review=value['anchor_review']
++    if not isinstance(review,dict) or not all(review.get(k) is True for k in ['accepted','complete_assembly','exactly_one_rider','seated']):
++        raise ValueError('Assembly requires a reviewed complete seated rider anchor')
++    if not review.get('source'):
++        raise ValueError('Anchor review needs a reviewer/source')
++    return deepcopy(value)
++
++
++def is_assembly(record):
++    return assembly(record) is not None
++
++
++def uses_h(record):
++    from .real_views import VEHICLES
++    return is_assembly(record) or record['category'].lower() in VEHICLES
++
++
++def prompt(record, view='same observed view'):
++    a = assembly(record)
++    if a is None:
++        raise ValueError('No rider assembly')
++    return (f'Create a clean {view} of the same seated rider and the same {a["vehicle_subtype"]} '
++        'together as one complete asset. Preserve exactly one rider, the same vehicle and the fixed seated pose. '
++        f'Preserve the observed rider appearance: {a["rider_appearance"]}. '
++        f'Preserve the observed vehicle appearance: {a["vehicle_appearance"]}. '
++        f'Preserve the posture: {a["pose_description"]}. '
++        f'Preserve hand-to-handlebar contact: {a["hand_handlebar_contact"]}; '
++        f'hip-to-seat contact: {a["seat_contact"]}; foot support: {a["foot_support"]}. '
++        'Keep head, torso, hands, feet, handlebars, frame and wheels inside the frame. '
++        'Do not add passengers, headwear, logos or unobserved accessories. '
++        'Do not remove the person or vehicle, change the pose, detach limbs, or duplicate wheels. '
++        'Use a plain white background with comfortable margin. Preserve plausible self-occlusion.')
++
++
++def union_masks(rider, vehicle):
++    import numpy as np
++    a,b=np.asarray(rider,dtype=bool),np.asarray(vehicle,dtype=bool)
++    if a.ndim!=2 or a.shape!=b.shape or not a.any() or not b.any():
++        raise ValueError('Both nonempty rider and vehicle masks of equal 2D shape are required')
++    return a | b
++
++
++def validate_reference(record, reference):
++    a=assembly(record)
++    if a is None:
++        return
++    review=reference.get('assembly_review',{})
++    if (reference.get('identity')!=a['identity'] or reference.get('pose_cluster_id')!=a['pose_cluster_id']
++            or not all(review.get(k) is True for k in ['accepted','same_identity','same_pose','complete_assembly','complementary_view'])
++            or not review.get('source')):
++        raise ValueError('Real reference lacks same-identity, fixed-pose and complementary-view review')
++
++
++def validate_flux_review(row, flux_result):
++    if not is_assembly(row):
++        return
++    reviews={x['sha256']:x for x in row.get('flux_assembly_reviews',[])}
++    for image in flux_result['images']:
++        r=reviews.get(image['sha256'],{})
++        if not all(r.get(k) is True for k in ['accepted','complete_assembly','same_pose','same_identity','contacts_preserved']) or not r.get('source'):
++            raise ValueError('Generated assembly must pass explicit identity/pose/contact review before reconstruction')
+--- a/asset_extraction/vision.py
++++ b/asset_extraction/vision.py
+@@ -890,7 +890,7 @@
+     return [q[i] for i in range(max((len(q) for q in queues), default=0)) for q in queues if i<len(q)]
+ 
+ 
+-def _clean_mask(mask: Any, bbox: list[float]) -> tuple[Any, int, float]:
++def _clean_mask(mask: Any, bbox: list[float], *, preserve_components: bool = False) -> tuple[Any, int, float]:
+     import numpy as np
+ 
+     binary = np.asarray(mask, dtype="uint8")
+@@ -903,7 +903,7 @@
+     keep = 1 + int(np.argmax(areas))
+     largest = labels == keep
+     ratio = float(areas.max()) / max(1.0, float(areas.sum()))
+-    return largest, int(count - 1), ratio
++    return (binary.astype(bool) if preserve_components else largest), int(count - 1), ratio
+ 
+ 
+ def _mask_quality(row: dict[str, Any], mask: Any, largest_ratio: float, shape: tuple[int, int, int], config: SceneExportConfig) -> tuple[bool, float, str]:
+--- a/asset_extraction/vlm.py
++++ b/asset_extraction/vlm.py
+@@ -269,6 +269,9 @@
+         candidate: dict[str, Any],
+         vlm_result: dict[str, Any] | None = None,
+     ) -> list[str]:
++        from .rider_vehicle import is_assembly, prompt
++        if is_assembly(candidate):
++            return [prompt(candidate)]
+         result = vlm_result or {}
+         category = self.normalize_category(result.get("category") or candidate.get("category"))
+         if category not in self.SUPPORTED | self.VEHICLE:
+@@ -316,6 +319,8 @@
+         "road edge, sidewalk strip, fence or guardrail extending beyond this mask; attached_fragment for a "
+         "part cut from a larger object; standing_vegetation for an upright tree/bush/canopy; "
+         "background for ground/building pixels; multiple_objects for unrelated bundled targets; unknown if unclear. "
++        "One seated rider on their two-wheel vehicle is a single functional discrete_object when both are complete. "
++        "Nearby unrelated pedestrians or additional riders are multiple_objects. "
+         "A mask boundary does not make a physical boundary. Never call a curb segment a discrete barrier. "
+         "structure_extent is whole_unit only if the foreground contains the complete functional unit visible "
+         "in this viewpoint; partial_unit for a shaft/arm/base cut from a larger object, large missing segments "
+--- a/nuscenes/prepare_routes.py
++++ b/nuscenes/prepare_routes.py
+@@ -5,6 +5,7 @@
+ from asset_extraction.io_utils import write_json
+ from asset_extraction.real_views import VEHICLES, review_references
+ from .prepare_handoff import validate_rows
++from asset_extraction.rider_vehicle import assembly, uses_h, POLICY_VERSION, validate_reference
+ 
+ def build_routes(handoff: Path, run_dir: Path) -> dict:
+     rows=json.loads(handoff.read_text()); validate_rows(rows)
+@@ -19,11 +20,13 @@
+         oid=row['obj_id']; source=sources.get(oid)
+         if source is None:
+             raise ValueError('Missing provenance for '+oid)
+-        vehicle=row['category'].lower() in VEHICLES
++        combo = assembly(dict(source, category=row['category']))
++        vehicle=uses_h(dict(row, assembly=combo))
+         real=source.get('real_images',[]) if vehicle else []
+         if vehicle and not 0<=len(real)<=4:
+             raise ValueError(f'{oid}: expected 0..4 real images')
+         for image in real:
++            validate_reference(dict(row, assembly=combo), image)
+             path=Path(image['rgba_path'])
+             if hashlib.sha256(path.read_bytes()).hexdigest()!=image['sha256']:
+                 raise ValueError('Real reference changed: '+str(path))
+@@ -31,7 +34,8 @@
+             route='H' if vehicle else 'B0',real_images=real,
+             real_view_selection=source.get('real_view_selection') if vehicle else None,
+             flux_output_keys=[f'{oid}_{i}.png' for i in range(len(row['prompts']))],
+-            attributes=source.get('vlm'), source=source['source']))
++            attributes=source.get('vlm'), source=source['source'],
++            **(dict(assembly=combo, assembly_policy=POLICY_VERSION) if combo else {})))
+     result=dict(schema_version=1,flux_input=str(handoff.resolve()),
+         flux_input_sha256=hashlib.sha256(handoff.read_bytes()).hexdigest(),assets=routes)
+     return result
+--- a/tests/test_rider_vehicle.py
++++ b/tests/test_rider_vehicle.py
+@@ -0,0 +1,74 @@
++import json
++from copy import deepcopy
++from pathlib import Path
++import numpy as np
++import pytest
++from asset_extraction.rider_vehicle import assembly,uses_h,prompt,union_masks,validate_reference,validate_flux_review
++from asset_extraction.vision import _clean_mask
++from asset_extraction.export import _needs_heading
++
++@pytest.fixture
++def combo():
++ return dict(category='motorcycle',assembly=dict(asset_kind='rider_vehicle_rigid',fixed_pose=True,rider_count=1,
++ vehicle_subtype='seated scooter',propulsion_label='unknown',propulsion_evidence=[],pose_usage='riding',
++ pose_description='seated',rider_appearance='blue coat',vehicle_appearance='gray scooter',hand_handlebar_contact='both hands',
++ seat_contact='seated',foot_support='floorboard',source_id='source',shot_id='shot',identity='person-bike-1',pose_cluster_id='pose1',
++ internal_articulation=False,wheel_animation=False,anchor_review=dict(accepted=True,complete_assembly=True,exactly_one_rider=True,seated=True,source='test')))
++
++def test_opt_in_only(combo):
++ assert uses_h(combo)
++ assert not uses_h(dict(category='motorcycle'))
++ assert not uses_h(dict(category='bicycle'))
++ assert uses_h(dict(category='car'))
++ assert _needs_heading('motorcycle',assembly(combo))
++ assert not _needs_heading('motorcycle')
++
++@pytest.mark.parametrize('field,value',[('rider_count',2),('rider_count',True),('fixed_pose',False),('wheel_animation',True),('pose_usage','walking'),('propulsion_label','electric_confirmed')])
++def test_invalid_contract(combo,field,value):
++ combo['assembly'][field]=value
++ with pytest.raises(ValueError):assembly(combo)
++
++def test_union_preserves_disconnected_support_and_holes():
++ a=np.zeros((30,30),bool);b=a.copy();a[2:8,2:8]=True;b[15:25,15:25]=True;b[18:22,18:22]=False
++ m=union_masks(a,b);preserved,_,_=_clean_mask(m,[0,0,30,30],preserve_components=True)
++ assert np.array_equal(m,preserved)
++ assert not preserved[19,19] and preserved[3,3]
++ largest,_,_=_clean_mask(m,[0,0,30,30]);assert not largest[3,3]
++ with pytest.raises(ValueError):union_masks(a,np.zeros_like(a))
++
++def test_prompts_and_deepcopy(combo):
++ a=assembly(combo);a['identity']='changed';assert assembly(combo)['identity']=='person-bike-1'
++ p=prompt(combo);assert 'blue coat' in p and 'exactly one rider' in p and 'foot support' in p
++
++def test_reference_pose_gate(combo):
++ r=dict(identity='person-bike-1',pose_cluster_id='pose1',assembly_review={k:True for k in ['accepted','same_identity','same_pose','complete_assembly','complementary_view']})
++ r['assembly_review']['source']='test';validate_reference(combo,r)
++ r['pose_cluster_id']='pose2'
++ with pytest.raises(ValueError):validate_reference(combo,r)
++
++def test_flux_must_be_reviewed_by_exact_hash(combo):
++ f=dict(images=[dict(sha256='abc')])
++ with pytest.raises(ValueError):validate_flux_review(combo,f)
++ combo['flux_assembly_reviews']=[dict(sha256='abc',accepted=True,complete_assembly=True,same_pose=True,same_identity=True,contacts_preserved=True,source='test')]
++ validate_flux_review(combo,f)
++ f['images'][0]['sha256']='changed'
++ with pytest.raises(ValueError):validate_flux_review(combo,f)
++
++def test_routes_and_jobs_preserve_and_hash_metadata(combo,tmp_path):
++ from asset_extraction.generation import PATH_KEYS,prepare_jobs,sha256
++ from nuscenes.prepare_routes import build_routes
++ from asset_extraction.io_utils import write_json
++ (tmp_path/'trellis/pipelines').mkdir(parents=True)
++ for f in ['trellis/pipelines/trellis_image_to_3d.py','birefnet-general-lite.onnx','source.png']:(tmp_path/f).write_text('test')
++ conf={k:str(tmp_path) for k in PATH_KEYS};conf.update(seed=42,segmentation_model=str(tmp_path/'birefnet-general-lite.onnx'))
++ row=dict(scene_id='scene',obj_id='obj',category='motorcycle',image_path=str(tmp_path/'source.png'),prompts=[prompt(combo)])
++ handoff=tmp_path/'handoff.json';routes=tmp_path/'routes.json';write_json(handoff,[row])
++ source=dict(asset_id='obj',**combo,source=dict(identity='person-bike-1'),real_images=[],real_view_selection={})
++ write_json(tmp_path/'scenes/scene/logs/export_items_full.json',[source]);write_json(routes,build_routes(handoff,tmp_path))
++ first=prepare_jobs(handoff,routes,conf)
++ assert first['assets'][0]['assembly']==combo['assembly'] and first['assets'][0]['route']=='H'
++ assert set(json.loads(handoff.read_text())[0])=={'scene_id','obj_id','category','image_path','prompts'}
++ data=json.loads(routes.read_text());data['assets'][0]['assembly']['vehicle_appearance']='red';write_json(routes,data)
++ assert prepare_jobs(handoff,routes,conf)['signature']!=first['signature']
++ data['assets'][0]['route']='B0';write_json(routes,data)
++ with pytest.raises(ValueError,match='mismatch'):prepare_jobs(handoff,routes,conf)

@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "repositories": [
+    {
+      "path": "DriveLab",
+      "remote": "https://github.com/jincenou/DriveLab.git",
+      "head": "dde9b9d32c123cab17e1ffae94d5f6014418a500",
+      "tracked_modifications": [
+        "M asset_extraction/bank.py",
+        " M asset_extraction/export.py",
+        " M asset_extraction/generation.py",
+        " M asset_extraction/pipeline.py",
+        " M asset_extraction/real_views.py",
+        " M asset_extraction/run.py",
+        " M asset_extraction/vision.py",
+        " M asset_extraction/vlm.py",
+        " M nuscenes/prepare_routes.py"
+      ]
+    },
+    {
+      "path": "pre_flux_pipeline",
+      "remote": "https://github.com/jincenou/DriveLab_pro_pipeline.git",
+      "head": "e13dcda2de30ca2e7bc27b4eb49f39c33c1b8bb8",
+      "tracked_modifications": []
+    },
+    {
+      "path": "workplace1/human",
+      "remote": "https://github.com/jincenou/human_cvpr.git",
+      "head": "569d7f2886313062c0d4480d6e57388eda084037",
+      "tracked_modifications": [
+        "M README.md",
+        " M batch.py",
+        " M tests/test_production_pause.py"
+      ]
+    },
+    {
+      "path": "workplace1/4danyone/repo",
+      "remote": "https://github.com/ant-research/4DAnyone.git",
+      "head": "9cc2aa230fe5d364da2c5634ec3dabadadcb0d60",
+      "tracked_modifications": []
+    }
+  ],
+  "note": "Source manifest hashes describe the actual working files, including project-specific modifications. Models and external dependency trees are not bundled."
+}
